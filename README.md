@@ -54,7 +54,20 @@ To capture Admin UI changes back to git:
 | `api` | Add Keycloak JWKS validation (same RS256 pattern as Auth0) |
 | `web` | OIDC client pointing at `avcd-web` |
 | `mcp` | Public PKCE client `avcd-mcp` |
-| `traefik` | Route `auth.dev.avcd.ai` to Keycloak |
+| `traefik` | Route `auth.dev.avcd.ai` to Keycloak (via deploy compose labels) |
+
+## Dev deployment
+
+See `deploy/production/docker-compose.yml` and `.github/workflows/deploy-keycloak-dev.yml`.
+
+```bash
+make test-production      # static checks for prod compose
+make test-deploy-workflow # static checks for deploy workflow
+make pull-secrets         # export Infisical keycloak project → .env.infisical
+KEYCLOAK_HOST=auth.dev.avcd.ai make e2e-deploy
+```
+
+GitHub Environment `development` needs `KEYCLOAK_INFISICAL_*` and `DO_DEPLOY_*` secrets (see `.cursor/skills/security/keycloak-local/SKILL.md`).
 
 ## Troubleshooting
 

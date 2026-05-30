@@ -28,6 +28,8 @@ jobs:
         run: |
           chmod +x scripts/*.sh tests/*.sh
           ./tests/test_compose_config.sh
+          ./tests/test_production_compose.sh
+          ./tests/test_deploy_workflow.sh
 
       - name: Start stack
         run: docker compose up -d --wait

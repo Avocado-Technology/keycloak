@@ -1,0 +1,155 @@
+{
+  "realm": "avcd",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "Default AVCD user role",
+        "composite": false,
+        "clientRole": false
+      }
+    ]
+  },
+  "defaultRole": {
+    "name": "user",
+    "description": "Default AVCD user role",
+    "composite": false,
+    "clientRole": false
+  },
+  "clientScopes": [
+    {
+      "name": "openid",
+      "description": "OpenID Connect scope with subject claim",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "sub",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": {
+            "introspection.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "avcd-api-audience",
+      "description": "Adds GraphQL API audience claim to access tokens",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "avcd-api-audience-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "https://dev.avcd.ai/api",
+            "id.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "avcd-mcp-audience",
+      "description": "Adds MCP API audience claim to access tokens",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "avcd-mcp-audience-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "https://dev.avcd.ai/mcp",
+            "id.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultDefaultClientScopes": [
+    "openid",
+    "avcd-api-audience"
+  ],
+  "defaultOptionalClientScopes": [
+    "avcd-mcp-audience"
+  ],
+  "clients": [
+    {
+      "clientId": "avcd-web",
+      "name": "AVCD Web Portal",
+      "description": "Next.js web application (confidential, auth code + refresh)",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "redirectUris": [
+        "https://dev.avcd.ai/api/auth/callback",
+        "https://avcd.ai/api/auth/callback"
+      ],
+      "webOrigins": [
+        "https://dev.avcd.ai",
+        "https://avcd.ai"
+      ],
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": true
+    },
+    {
+      "clientId": "avcd-mcp",
+      "name": "AVCD MCP Server",
+      "description": "Public client with PKCE for MCP OAuth 2.1",
+      "enabled": true,
+      "redirectUris": [
+        "https://dev.avcd.ai/mcp/oauth/callback",
+        "https://dev.avcd.ai/callback",
+        "https://claude.ai/api/mcp/auth_callback",
+        "https://claude.com/api/mcp/auth_callback"
+      ],
+      "webOrigins": [
+        "https://dev.avcd.ai",
+        "https://avcd.ai"
+      ],
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "fullScopeAllowed": true,
+      "defaultClientScopes": [
+        "openid",
+        "avcd-mcp-audience"
+      ]
+    }
+  ]
+}

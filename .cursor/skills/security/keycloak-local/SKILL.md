@@ -5,7 +5,7 @@ description: Local Docker setup and validation for self-hosted Keycloak IdP in t
 
 # Keycloak Local Development
 
-> **Related**: [Auth0 Terraform Setup](~/.cursor/skills/terraform-auth0-setup/SKILL.md) | [API JWT Auth](../../api/docs/architecture/JWT_AUTH.md)
+> **Related**: [keycloak-authorization](./keycloak-authorization/SKILL.md) | [terraform-keycloak](../../../infra/.cursor/skills/terraform-keycloak/SKILL.md) | [Auth0 Terraform Setup](~/.cursor/skills/terraform-auth0-setup/SKILL.md)
 
 ## Overview
 
@@ -75,8 +75,61 @@ issuer = f"{settings.keycloak_url}/realms/avcd"
 | Realm not imported | `make clean && make up`; check `docker compose logs keycloak` |
 | JWT audience mismatch | Ensure client scope `avcd-api-audience` is default |
 | Slow startup | Wait up to 90s; Keycloak healthcheck has long `start_period` |
+| `permission denied for schema public` on DO Postgres | Run one-time grant as `doadmin` on DB `keycloak` (see Dev Deployment below) |
 
 ## References
 
 - [Keycloak Docker guide](https://www.keycloak.org/server/containers)
 - [Realm import](https://www.keycloak.org/server/importExport)
+
+## Dev Deployment (DigitalOcean)
+
+Production deploy uses `deploy/production/docker-compose.yml` on the dev droplet behind Traefik at `auth.dev.avcd.ai`.
+
+### Prerequisites (infra Phase 1)
+
+- Terraform `enable_keycloak_dev=true` applied (Postgres DB/user, Infisical project `keycloak`, DNS)
+- Infisical project ID: `885103af-2564-4fbf-995b-9ba144c6cc3b`
+- Machine Identity `avcd-keycloak-ci-cd` with Universal Auth enabled in Infisical UI
+- **One-time Postgres grant** (DO Managed PG 15+): from the dev droplet as `doadmin`:
+
+```bash
+psql "postgresql://doadmin@<postgres-host>:25060/keycloak?sslmode=require" -v ON_ERROR_STOP=1 <<'SQL'
+GRANT ALL ON SCHEMA public TO keycloak;
+ALTER SCHEMA public OWNER TO keycloak;
+GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;
+SQL
+```
+
+### GitHub Environment `development` (keycloak repo)
+
+| Secret / Variable | Value |
+|-------------------|-------|
+| `KEYCLOAK_INFISICAL_CLIENT_ID` | MI Universal Auth client ID |
+| `KEYCLOAK_INFISICAL_CLIENT_SECRET` | MI Universal Auth client secret |
+| `KEYCLOAK_INFISICAL_PROJECT_ID` | `885103af-2564-4fbf-995b-9ba144c6cc3b` |
+| `DO_DEPLOY_HOST` | Dev droplet IP or hostname |
+| `DO_DEPLOY_USER` | Deploy user (e.g. `deploy`) |
+| `DO_DEPLOY_PATH` | `/opt/keycloak` |
+| `DO_DEPLOY_SSH_KEY` | SSH private key secret |
+
+### Verify Infisical export locally
+
+```bash
+export KEYCLOAK_INFISICAL_CLIENT_ID=...
+export KEYCLOAK_INFISICAL_CLIENT_SECRET=...
+make pull-secrets
+grep KC_DB_URL .env.infisical
+```
+
+### Deploy
+
+Push to `main` (paths under `deploy/` or `config/`) or run `Deploy Keycloak to DigitalOcean (dev)` workflow.
+
+Post-deploy E2E:
+
+```bash
+KEYCLOAK_HOST=auth.dev.avcd.ai make e2e-deploy
+```
+
+Expected: `DEPLOY E2E PASS` and issuer `https://auth.dev.avcd.ai/realms/avcd`.

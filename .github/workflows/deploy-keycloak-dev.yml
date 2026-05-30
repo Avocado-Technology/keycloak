@@ -1,0 +1,147 @@
+# Deploy Keycloak to DigitalOcean (dev)
+# Secrets: Infisical project keycloak (KEYCLOAK_INFISICAL_* in GitHub Environment).
+# Droplet: DO_DEPLOY_* variables + DO_DEPLOY_SSH_KEY.
+
+name: Deploy Keycloak to DigitalOcean (dev)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "config/**"
+      - "deploy/**"
+      - "docker-compose.yml"
+      - "Makefile"
+      - "scripts/**"
+      - "tests/test_production_compose.sh"
+      - "tests/test_deploy_workflow.sh"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-keycloak-do-dev
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate production compose
+        run: |
+          chmod +x tests/*.sh scripts/*.sh
+          ./tests/test_production_compose.sh
+          ./tests/test_deploy_workflow.sh
+
+      - name: Install Infisical CLI
+        run: |
+          curl -1sLf 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh' | sudo -E bash
+          sudo apt-get update && sudo apt-get install -y infisical
+          infisical --version
+
+      - name: Fetch secrets from Infisical
+        env:
+          INFISICAL_CLIENT_ID: ${{ secrets.KEYCLOAK_INFISICAL_CLIENT_ID }}
+          INFISICAL_CLIENT_SECRET: ${{ secrets.KEYCLOAK_INFISICAL_CLIENT_SECRET }}
+          INFISICAL_API_URL: ${{ vars.INFISICAL_API_URL || 'https://secrets.dev.avcd.ai/api' }}
+          INFISICAL_PROJECT_ID: ${{ vars.KEYCLOAK_INFISICAL_PROJECT_ID || secrets.KEYCLOAK_INFISICAL_PROJECT_ID || '885103af-2564-4fbf-995b-9ba144c6cc3b' }}
+        run: |
+          set -euo pipefail
+          [ -n "${INFISICAL_CLIENT_ID:-}" ] || { echo "::error::Set KEYCLOAK_INFISICAL_CLIENT_ID on environment development"; exit 1; }
+          [ -n "${INFISICAL_CLIENT_SECRET:-}" ] || { echo "::error::Set KEYCLOAK_INFISICAL_CLIENT_SECRET on environment development"; exit 1; }
+          export INFISICAL_TOKEN=$(infisical login --method=universal-auth \
+            --client-id="$INFISICAL_CLIENT_ID" --client-secret="$INFISICAL_CLIENT_SECRET" \
+            --domain="${INFISICAL_API_URL%/api}" --silent --plain)
+          infisical export --env=dev --path=/ \
+            --projectId="$INFISICAL_PROJECT_ID" --token="$INFISICAL_TOKEN" \
+            --format=dotenv --domain="${INFISICAL_API_URL%/api}" --silent \
+            > .env.infisical
+          test -s .env.infisical || (echo "::error::Infisical export empty (keycloak project, env dev)" && exit 1)
+          set -a
+          source .env.infisical
+          set +a
+          for key in KC_DB_URL KC_DB_USERNAME KC_DB_PASSWORD KEYCLOAK_ADMIN_PASSWORD KEYCLOAK_HOST; do
+            eval "val=\${$key:-}"
+            if [ -z "$val" ]; then
+              echo "::error::Missing $key in Infisical (project keycloak, env dev)"
+              exit 1
+            fi
+            echo "::add-mask::$val"
+          done
+          echo "✓ Infisical export ready"
+
+      - name: Copy .env.infisical to deploy directory
+        run: cp .env.infisical deploy/production/.env.infisical
+
+      - name: Resolve Keycloak public hostname
+        id: keycloak_host
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.infisical
+          set +a
+          HOST="${KEYCLOAK_HOST:-}"
+          if [ -z "$HOST" ]; then
+            echo "::error::KEYCLOAK_HOST missing from Infisical export"
+            exit 1
+          fi
+          echo "host=$HOST" >> "$GITHUB_OUTPUT"
+          echo "discovery_url=https://${HOST}/realms/avcd/.well-known/openid-configuration" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure Postgres schema permissions (idempotent)
+        env:
+          DEPLOY_HOST: ${{ vars.DO_DEPLOY_HOST || secrets.DO_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DO_DEPLOY_USER || secrets.DO_DEPLOY_USER }}
+          SSH_KEY: ${{ secrets.DO_DEPLOY_SSH_KEY }}
+          BOOTSTRAP_URI: ${{ secrets.KEYCLOAK_POSTGRES_BOOTSTRAP_URI }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BOOTSTRAP_URI:-}" ]; then
+            echo "::warning::KEYCLOAK_POSTGRES_BOOTSTRAP_URI not set — skipping Postgres schema bootstrap"
+            exit 0
+          fi
+          [ -n "${DEPLOY_HOST:-}" ] || { echo "::error::DO_DEPLOY_HOST missing"; exit 1; }
+          [ -n "${DEPLOY_USER:-}" ] || { echo "::error::DO_DEPLOY_USER missing"; exit 1; }
+          [ -n "${SSH_KEY:-}" ] || { echo "::error::DO_DEPLOY_SSH_KEY missing"; exit 1; }
+          install -d -m 700 ~/.ssh
+          umask 077
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          BOOTSTRAP_B64=$(printf '%s' "$BOOTSTRAP_URI" | base64 -w0)
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" "BOOTSTRAP_B64='$BOOTSTRAP_B64' bash -s" <<'REMOTE'
+          set -euo pipefail
+          BOOTSTRAP_URI="$(printf '%s' "$BOOTSTRAP_B64" | base64 -d)"
+          command -v psql >/dev/null 2>&1 || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-client
+          psql "$BOOTSTRAP_URI" -v ON_ERROR_STOP=1 <<'SQL'
+          GRANT ALL ON SCHEMA public TO keycloak;
+          ALTER SCHEMA public OWNER TO keycloak;
+          GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;
+          SQL
+          REMOTE
+          echo "✓ Postgres schema permissions ensured"
+
+      - name: Deploy Keycloak stack
+        uses: Avocado-Technology/avcd-actions/droplet-compose-deploy@v2
+        with:
+          deploy_host: ${{ vars.DO_DEPLOY_HOST || secrets.DO_DEPLOY_HOST }}
+          deploy_user: ${{ vars.DO_DEPLOY_USER || secrets.DO_DEPLOY_USER }}
+          deploy_path: ${{ vars.DO_DEPLOY_PATH || secrets.DO_DEPLOY_PATH }}
+          ssh_key: ${{ secrets.DO_DEPLOY_SSH_KEY }}
+          compose_subdirectory: deploy/production
+          compose_file: docker-compose.yml
+          public_host: ${{ steps.keycloak_host.outputs.host }}
+          acme_email: ""
+          pass_compose_tls_env: "false"
+          clear_published_ports: "none"
+          verify_mode: http
+          verify_url: ${{ steps.keycloak_host.outputs.discovery_url }}
+          verify_body_substring: '"issuer"'
+          verify_http_insecure_first: "false"
