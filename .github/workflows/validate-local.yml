@@ -1,0 +1,40 @@
+name: Validate Keycloak Local Stack
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: keycloak-validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare environment
+        run: cp .env.example .env
+
+      - name: Install Python JWT dependencies
+        run: python3 -m pip install --disable-pip-version-check pyjwt cryptography
+
+      - name: Static config checks
+        run: |
+          chmod +x scripts/*.sh tests/*.sh
+          ./tests/test_compose_config.sh
+
+      - name: Start stack
+        run: docker compose up -d --wait
+
+      - name: E2E validation
+        run: make validate
+
+      - name: Teardown
+        if: always()
+        run: docker compose down -v
