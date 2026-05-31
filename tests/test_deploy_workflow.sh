@@ -16,8 +16,10 @@ pass() {
 
 [[ -f "$WORKFLOW" ]] || fail "deploy-keycloak-dev.yml missing"
 grep -q "Deploy Keycloak to DigitalOcean" "$WORKFLOW" || fail "workflow title missing"
-grep -q "KEYCLOAK_INFISICAL_CLIENT_ID" "$WORKFLOW" || fail "KEYCLOAK_INFISICAL_CLIENT_ID not referenced"
-grep -q "KEYCLOAK_INFISICAL_CLIENT_SECRET" "$WORKFLOW" || fail "KEYCLOAK_INFISICAL_CLIENT_SECRET not referenced"
+grep -q "INFISICAL_OIDC_IDENTITY_ID" "$WORKFLOW" || fail "INFISICAL_OIDC_IDENTITY_ID not referenced"
+grep -q "id-token: write" "$WORKFLOW" || fail "OIDC requires id-token write permission"
+grep -q 'method=oidc' "$WORKFLOW" || fail "Infisical login must use OIDC"
+grep -q "KEYCLOAK_INFISICAL_CLIENT_ID" "$WORKFLOW" && fail "legacy KEYCLOAK_INFISICAL_CLIENT_ID still referenced"
 grep -q "droplet-compose-deploy@v2" "$WORKFLOW" || fail "droplet-compose-deploy action missing"
 grep -q "compose_subdirectory: deploy/production" "$WORKFLOW" || fail "compose_subdirectory missing"
 grep -q "openid-configuration" "$WORKFLOW" || fail "OIDC discovery verify URL missing"
