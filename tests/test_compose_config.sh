@@ -31,6 +31,9 @@ pass "docker-compose.yml structure"
 [[ -f config/avcd-realm.json ]] || fail "config/avcd-realm.json missing"
 grep -q '"realm": "avcd"' config/avcd-realm.json || fail "avcd realm not defined"
 grep -q 'avcd-validation' config/avcd-realm.json || fail "validation client not defined"
+grep -q '"providerId": "google"' config/avcd-realm.json || fail "google identity provider not defined in local realm"
+grep -q "avcd-realm.json:/opt/keycloak/data/import/avcd-realm.json" docker-compose.yml \
+  || fail "local compose must mount only avcd-realm.json (not entire config/)"
 pass "realm import config"
 
 [[ -x scripts/wait-for-keycloak.sh ]] || fail "scripts/wait-for-keycloak.sh not executable"

@@ -1,4 +1,4 @@
-.PHONY: up down logs validate clean wait test-config test-production test-deploy-workflow infisical-check pull-secrets e2e-deploy
+.PHONY: up down logs validate clean wait test-config test-production test-deploy-workflow infisical-check pull-secrets configure-google-idp e2e-deploy e2e-google
 
 COMPOSE ?= docker compose
 
@@ -26,11 +26,22 @@ wait:
 validate: up wait
 	./scripts/e2e-local-validation.sh
 
+configure-google-idp:
+	@chmod +x scripts/configure-google-idp.sh
+	./scripts/configure-google-idp.sh
+
+e2e-google: configure-google-idp
+	@chmod +x scripts/e2e-google-idp-validation.sh
+	./scripts/e2e-google-idp-validation.sh
+
 clean:
 	$(COMPOSE) down -v
 
 test-config:
+	@chmod +x tests/*.sh scripts/*.sh
 	./tests/test_compose_config.sh
+	./tests/test_realm_google_idp.sh
+	./tests/test_configure_google_idp.sh
 
 test-production:
 	./tests/test_production_compose.sh
