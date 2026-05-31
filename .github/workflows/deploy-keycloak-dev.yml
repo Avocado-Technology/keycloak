@@ -74,7 +74,7 @@ jobs:
           set -a
           source .env.infisical
           set +a
-          for key in KC_DB_URL KC_DB_USERNAME KC_DB_PASSWORD KEYCLOAK_ADMIN_PASSWORD KEYCLOAK_HOST DO_DEPLOY_HOST DO_DEPLOY_USER DO_DEPLOY_PATH KEYCLOAK_POSTGRES_BOOTSTRAP_URI; do
+          for key in KC_DB_URL KC_DB_USERNAME KC_DB_PASSWORD KEYCLOAK_ADMIN_PASSWORD KEYCLOAK_HOST DO_DEPLOY_HOST DO_DEPLOY_USER DO_DEPLOY_PATH KEYCLOAK_POSTGRES_BOOTSTRAP_URI GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET; do
             eval "val=\${$key:-}"
             if [ -z "$val" ]; then
               echo "::error::Missing $key in Infisical (infra project ${INFISICAL_SECRET_PATH}, env dev)"
@@ -177,3 +177,8 @@ jobs:
           verify_url: ${{ steps.deploy.outputs.discovery_url }}
           verify_body_substring: '"issuer"'
           verify_http_insecure_first: "false"
+
+  apply-keycloak-config:
+    needs: deploy
+    uses: Avocado-Technology/avcd-infra/.github/workflows/keycloak-config-apply.yml@main
+    secrets: inherit
