@@ -180,5 +180,17 @@ jobs:
 
   apply-keycloak-config:
     needs: deploy
-    uses: Avocado-Technology/avcd-infra/.github/workflows/keycloak-config-apply.yml@main
-    secrets: inherit
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Trigger avcd-infra Keycloak config apply
+        env:
+          GH_TOKEN: ${{ secrets.GH_TERRAFORM_TOKEN }}
+        run: |
+          set -euo pipefail
+          [ -n "${GH_TOKEN:-}" ] || { echo "::error::GH_TERRAFORM_TOKEN missing — cannot trigger keycloak-config apply"; exit 1; }
+          gh workflow run keycloak-config-apply.yml -R Avocado-Technology/avcd-infra --ref main
+          sleep 8
+          RUN_ID="$(gh run list -R Avocado-Technology/avcd-infra -w "Keycloak Config Apply" -L 1 --json databaseId -q '.[0].databaseId')"
+          echo "Watching avcd-infra run ${RUN_ID}"
+          gh run watch "$RUN_ID" -R Avocado-Technology/avcd-infra --exit-status
