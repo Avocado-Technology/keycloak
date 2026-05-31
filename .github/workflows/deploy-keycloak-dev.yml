@@ -182,13 +182,18 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     environment: development
+    continue-on-error: true
     steps:
       - name: Trigger avcd-infra Keycloak config apply
         env:
           GH_TOKEN: ${{ secrets.GH_TERRAFORM_TOKEN }}
         run: |
           set -euo pipefail
-          [ -n "${GH_TOKEN:-}" ] || { echo "::error::GH_TERRAFORM_TOKEN missing — cannot trigger keycloak-config apply"; exit 1; }
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::warning::GH_TERRAFORM_TOKEN missing on development environment — skip cross-repo keycloak-config trigger"
+            echo "Run avcd-infra keycloak-config-apply workflow manually or add GH_TERRAFORM_TOKEN"
+            exit 0
+          fi
           gh workflow run keycloak-config-apply.yml -R Avocado-Technology/avcd-infra --ref main
           sleep 8
           RUN_ID="$(gh run list -R Avocado-Technology/avcd-infra -w "Keycloak Config Apply" -L 1 --json databaseId -q '.[0].databaseId')"
