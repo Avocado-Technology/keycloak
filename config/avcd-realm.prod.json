@@ -1,4 +1,5 @@
 {
+  "_deprecated": "DEPRECATED — deployed Keycloak IdP config is managed by avcd-infra modules/keycloak-config Terraform. Local dev uses config/avcd-realm.json only.",
   "realm": "avcd",
   "enabled": true,
   "sslRequired": "external",
@@ -98,6 +99,24 @@
   "defaultOptionalClientScopes": [
     "avcd-mcp-audience"
   ],
+  "identityProviders": [
+    {
+      "alias": "google",
+      "displayName": "Google",
+      "providerId": "google",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "linkOnly": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "REPLACE_VIA_CONFIGURE_SCRIPT",
+        "clientSecret": "REPLACE_VIA_CONFIGURE_SCRIPT",
+        "defaultScope": "openid email profile",
+        "syncMode": "IMPORT"
+      }
+    }
+  ],
   "clients": [
     {
       "clientId": "avcd-web",
@@ -107,6 +126,7 @@
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
         "https://dev.avcd.ai/api/auth/callback",
+        "https://dev.avcd.ai/api/auth/callback/keycloak",
         "https://avcd.ai/api/auth/callback"
       ],
       "webOrigins": [

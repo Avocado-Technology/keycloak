@@ -39,7 +39,16 @@ AVCD realm OIDC discovery: http://localhost:8080/realms/avcd/.well-known/openid-
 
 ## Realm configuration
 
-Realm settings are imported from `config/avcd-realm.json` on first boot (`--import-realm`).
+| Environment | Source of truth | Mechanism |
+|-------------|-----------------|-----------|
+| **Local** | `config/avcd-realm.json` | `--import-realm` on first boot (`docker-compose.yml`) |
+| **Deployed dev** | `avcd-infra/modules/keycloak-config` | Terraform via `keycloak-config-apply.yml` |
+
+Local realm settings are imported from `config/avcd-realm.json` on first boot (`--import-realm`).
+
+Deployed Keycloak (`auth.dev.avcd.ai`) does **not** use JSON import. After deploy, run the **avcd-infra** `keycloak-config-apply` workflow (or push to `main`) to create/update the `avcd` realm, clients, and Google IdP.
+
+`config/avcd-realm.prod.json` is **deprecated** (reference only). Keep local JSON aligned with Terraform when adding clients for local dev.
 
 To capture Admin UI changes back to git:
 

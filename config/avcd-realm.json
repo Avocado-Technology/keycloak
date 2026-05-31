@@ -98,6 +98,24 @@
   "defaultOptionalClientScopes": [
     "avcd-mcp-audience"
   ],
+  "identityProviders": [
+    {
+      "alias": "google",
+      "displayName": "Google",
+      "providerId": "google",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "linkOnly": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "REPLACE_VIA_CONFIGURE_SCRIPT",
+        "clientSecret": "REPLACE_VIA_CONFIGURE_SCRIPT",
+        "defaultScope": "openid email profile",
+        "syncMode": "IMPORT"
+      }
+    }
+  ],
   "clients": [
     {
       "clientId": "avcd-validation",
@@ -125,7 +143,8 @@
       "secret": "local-web-client-secret",
       "redirectUris": [
         "http://localhost:3000/*",
-        "https://dev.avcd.ai/api/auth/callback",
+        "http://localhost:3000/api/auth/callback/keycloak",
+        "https://dev.avcd.ai/api/auth/callback/keycloak",
         "https://avcd.ai/api/auth/callback"
       ],
       "webOrigins": [
