@@ -52,11 +52,19 @@ jobs:
           INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_PROJECT_ID || '802aad98-56e1-4b3e-a0a9-68b3bfec4537' }}
           INFISICAL_SECRET_PATH: ${{ vars.INFISICAL_SECRET_PATH || '/keycloak' }}
           INFISICAL_OIDC_IDENTITY_ID: ${{ vars.INFISICAL_OIDC_IDENTITY_ID }}
+          INFISICAL_OIDC_AUDIENCE: ${{ vars.INFISICAL_OIDC_AUDIENCE || 'https://github.com/Avocado-Technology' }}
         run: |
           set -euo pipefail
           [ -n "${INFISICAL_OIDC_IDENTITY_ID:-}" ] || { echo "::error::Set INFISICAL_OIDC_IDENTITY_ID on environment development"; exit 1; }
-          export INFISICAL_TOKEN=$(infisical login --method=oidc \
-            --identity-id="$INFISICAL_OIDC_IDENTITY_ID" \
+          OIDC_JWT=$(curl -sS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${INFISICAL_OIDC_AUDIENCE}" | jq -r .value)
+          if [ -z "${OIDC_JWT:-}" ] || [ "$OIDC_JWT" = "null" ]; then
+            echo "::error::Failed to obtain GitHub OIDC token (check id-token: write and audience ${INFISICAL_OIDC_AUDIENCE})"
+            exit 1
+          fi
+          export INFISICAL_TOKEN=$(infisical login --method=oidc-auth \
+            --machine-identity-id="$INFISICAL_OIDC_IDENTITY_ID" \
+            --oidc-jwt="$OIDC_JWT" \
             --domain="${INFISICAL_API_URL%/api}" --silent --plain)
           infisical export --env=dev --path="${INFISICAL_SECRET_PATH}" \
             --projectId="$INFISICAL_PROJECT_ID" --token="$INFISICAL_TOKEN" \
