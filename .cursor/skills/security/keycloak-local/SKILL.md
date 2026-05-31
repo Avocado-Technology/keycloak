@@ -88,9 +88,9 @@ Production deploy uses `deploy/production/docker-compose.yml` on the dev droplet
 
 ### Prerequisites (infra Phase 1)
 
-- Terraform `enable_keycloak_dev=true` applied (Postgres DB/user, Infisical project `keycloak`, DNS)
-- Infisical project ID: `885103af-2564-4fbf-995b-9ba144c6cc3b`
-- Machine Identity `avcd-keycloak-ci-cd` with Universal Auth enabled in Infisical UI
+- Terraform `enable_keycloak_dev=true` applied (Postgres DB/user, Infisical secrets in infra project, DNS)
+- Infisical **infra project** (`avcd-infra`): `802aad98-56e1-4b3e-a0a9-68b3bfec4537`, secrets folder **`/keycloak`**
+- Machine Identity with Universal Auth and read access to `/keycloak` in the infra project (reuse infra Terraform MI or create in UI)
 - **One-time Postgres grant** (DO Managed PG 15+): from the dev droplet as `doadmin`:
 
 ```bash
@@ -103,11 +103,22 @@ SQL
 
 ### GitHub Environment `development` (keycloak repo)
 
+Create environment `development` if missing, then set secrets/variables (or run from `infra/`):
+
+```bash
+./scripts/sync-keycloak-github-env.sh
+```
+
+Requires `gh auth login` with **repo + admin:repo** (secrets write). Uses `keycloak/.env.deploy` for Infisical MI and Terraform outputs for deploy host + Postgres bootstrap URI.
+
 | Secret / Variable | Value |
 |-------------------|-------|
 | `KEYCLOAK_INFISICAL_CLIENT_ID` | MI Universal Auth client ID |
 | `KEYCLOAK_INFISICAL_CLIENT_SECRET` | MI Universal Auth client secret |
-| `KEYCLOAK_INFISICAL_PROJECT_ID` | `885103af-2564-4fbf-995b-9ba144c6cc3b` |
+| `KEYCLOAK_INFISICAL_PROJECT_ID` (var) | `802aad98-56e1-4b3e-a0a9-68b3bfec4537` (avcd-infra) |
+| `INFISICAL_SECRET_PATH` (var) | `/keycloak` |
+| `KEYCLOAK_POSTGRES_BOOTSTRAP_URI` (secret) | `postgresql://doadmin:…@…:25060/keycloak?sslmode=require` |
+| `INFISICAL_API_URL` (var) | `https://secrets.dev.avcd.ai/api` |
 | `DO_DEPLOY_HOST` | Dev droplet IP or hostname |
 | `DO_DEPLOY_USER` | Deploy user (e.g. `deploy`) |
 | `DO_DEPLOY_PATH` | `/opt/keycloak` |

@@ -63,11 +63,11 @@ See `deploy/production/docker-compose.yml` and `.github/workflows/deploy-keycloa
 ```bash
 make test-production      # static checks for prod compose
 make test-deploy-workflow # static checks for deploy workflow
-make pull-secrets         # export Infisical keycloak project → .env.infisical
+make pull-secrets         # export Infisical infra project /keycloak → .env.infisical
 KEYCLOAK_HOST=auth.dev.avcd.ai make e2e-deploy
 ```
 
-GitHub Environment `development` needs `KEYCLOAK_INFISICAL_*` and `DO_DEPLOY_*` secrets (see `.cursor/skills/security/keycloak-local/SKILL.md`).
+GitHub Environment `development` needs `KEYCLOAK_INFISICAL_*` and `DO_DEPLOY_*` secrets (see `.cursor/skills/security/keycloak-local/SKILL.md`). On **avcd-infra**, set repo variable `TF_VAR_enable_keycloak_dev=true` so Terraform apply keeps Keycloak resources in sync.
 
 ## Troubleshooting
 

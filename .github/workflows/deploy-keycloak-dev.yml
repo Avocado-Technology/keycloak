@@ -1,5 +1,5 @@
 # Deploy Keycloak to DigitalOcean (dev)
-# Secrets: Infisical project keycloak (KEYCLOAK_INFISICAL_* in GitHub Environment).
+# Secrets: Infisical infra project (avcd-infra), folder /keycloak (KEYCLOAK_INFISICAL_* in GitHub Environment).
 # Droplet: DO_DEPLOY_* variables + DO_DEPLOY_SSH_KEY.
 
 name: Deploy Keycloak to DigitalOcean (dev)
@@ -50,7 +50,8 @@ jobs:
           INFISICAL_CLIENT_ID: ${{ secrets.KEYCLOAK_INFISICAL_CLIENT_ID }}
           INFISICAL_CLIENT_SECRET: ${{ secrets.KEYCLOAK_INFISICAL_CLIENT_SECRET }}
           INFISICAL_API_URL: ${{ vars.INFISICAL_API_URL || 'https://secrets.dev.avcd.ai/api' }}
-          INFISICAL_PROJECT_ID: ${{ vars.KEYCLOAK_INFISICAL_PROJECT_ID || secrets.KEYCLOAK_INFISICAL_PROJECT_ID || '885103af-2564-4fbf-995b-9ba144c6cc3b' }}
+          INFISICAL_PROJECT_ID: ${{ vars.KEYCLOAK_INFISICAL_PROJECT_ID || secrets.KEYCLOAK_INFISICAL_PROJECT_ID || '802aad98-56e1-4b3e-a0a9-68b3bfec4537' }}
+          INFISICAL_SECRET_PATH: ${{ vars.INFISICAL_SECRET_PATH || '/keycloak' }}
         run: |
           set -euo pipefail
           [ -n "${INFISICAL_CLIENT_ID:-}" ] || { echo "::error::Set KEYCLOAK_INFISICAL_CLIENT_ID on environment development"; exit 1; }
@@ -58,18 +59,18 @@ jobs:
           export INFISICAL_TOKEN=$(infisical login --method=universal-auth \
             --client-id="$INFISICAL_CLIENT_ID" --client-secret="$INFISICAL_CLIENT_SECRET" \
             --domain="${INFISICAL_API_URL%/api}" --silent --plain)
-          infisical export --env=dev --path=/ \
+          infisical export --env=dev --path="${INFISICAL_SECRET_PATH:-/keycloak}" \
             --projectId="$INFISICAL_PROJECT_ID" --token="$INFISICAL_TOKEN" \
             --format=dotenv --domain="${INFISICAL_API_URL%/api}" --silent \
             > .env.infisical
-          test -s .env.infisical || (echo "::error::Infisical export empty (keycloak project, env dev)" && exit 1)
+          test -s .env.infisical || (echo "::error::Infisical export empty (infra project, path ${INFISICAL_SECRET_PATH:-/keycloak}, env dev)" && exit 1)
           set -a
           source .env.infisical
           set +a
           for key in KC_DB_URL KC_DB_USERNAME KC_DB_PASSWORD KEYCLOAK_ADMIN_PASSWORD KEYCLOAK_HOST; do
             eval "val=\${$key:-}"
             if [ -z "$val" ]; then
-              echo "::error::Missing $key in Infisical (project keycloak, env dev)"
+              echo "::error::Missing $key in Infisical (infra project /keycloak, env dev)"
               exit 1
             fi
             echo "::add-mask::$val"
@@ -102,6 +103,12 @@ jobs:
           BOOTSTRAP_URI: ${{ secrets.KEYCLOAK_POSTGRES_BOOTSTRAP_URI }}
         run: |
           set -euo pipefail
+          if [ -f .env.infisical ]; then
+            set -a
+            source .env.infisical
+            set +a
+          fi
+          BOOTSTRAP_URI="${BOOTSTRAP_URI:-${KEYCLOAK_POSTGRES_BOOTSTRAP_URI:-}}"
           if [ -z "${BOOTSTRAP_URI:-}" ]; then
             echo "::warning::KEYCLOAK_POSTGRES_BOOTSTRAP_URI not set — skipping Postgres schema bootstrap"
             exit 0

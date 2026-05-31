@@ -24,6 +24,9 @@ grep -q "compose_subdirectory: deploy/production" "$WORKFLOW" || fail "compose_s
 grep -q "openid-configuration" "$WORKFLOW" || fail "OIDC discovery verify URL missing"
 grep -q 'clear_published_ports: "none"' "$WORKFLOW" || fail "clear_published_ports should be none"
 grep -q "KEYCLOAK_POSTGRES_BOOTSTRAP_URI" "$WORKFLOW" || fail "Postgres bootstrap secret not referenced"
+grep -q "INFISICAL_SECRET_PATH" "$WORKFLOW" || fail "INFISICAL_SECRET_PATH not referenced"
+grep -q "/keycloak" "$WORKFLOW" || fail "Infisical export path /keycloak missing"
+grep -q "802aad98-56e1-4b3e-a0a9-68b3bfec4537" "$WORKFLOW" || fail "infra Infisical project ID missing"
 pass "deploy-keycloak-dev.yml structure"
 
 echo "All deploy workflow checks passed."
