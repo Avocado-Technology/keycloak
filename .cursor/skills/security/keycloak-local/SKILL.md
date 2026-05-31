@@ -103,26 +103,22 @@ SQL
 
 ### GitHub Environment `development` (keycloak repo)
 
-Create environment `development` if missing, then set secrets/variables (or run from `infra/`):
+Bootstrap only — app and deploy config live in Infisical `/keycloak` (see `infra/.cursor/skills/secrets-architecture/SKILL.md`):
 
 ```bash
-./scripts/sync-keycloak-github-env.sh
+cd ../infra
+./scripts/sync-github-bootstrap.sh keycloak
 ```
 
-Requires `gh auth login` with **repo + admin:repo** (secrets write). Uses `keycloak/.env.deploy` for Infisical MI and Terraform outputs for deploy host + Postgres bootstrap URI.
+Requires `gh auth login` with **repo + admin:repo** (secrets write). Reads Infisical MI from `infra/.env`.
 
-| Secret / Variable | Value |
-|-------------------|-------|
+| Secret | Purpose |
+|--------|---------|
 | `KEYCLOAK_INFISICAL_CLIENT_ID` | MI Universal Auth client ID |
 | `KEYCLOAK_INFISICAL_CLIENT_SECRET` | MI Universal Auth client secret |
-| `KEYCLOAK_INFISICAL_PROJECT_ID` (var) | `802aad98-56e1-4b3e-a0a9-68b3bfec4537` (avcd-infra) |
-| `INFISICAL_SECRET_PATH` (var) | `/keycloak` |
-| `KEYCLOAK_POSTGRES_BOOTSTRAP_URI` (secret) | `postgresql://doadmin:…@…:25060/keycloak?sslmode=require` |
-| `INFISICAL_API_URL` (var) | `https://secrets.dev.avcd.ai/api` |
-| `DO_DEPLOY_HOST` | Dev droplet IP or hostname |
-| `DO_DEPLOY_USER` | Deploy user (e.g. `deploy`) |
-| `DO_DEPLOY_PATH` | `/opt/keycloak` |
-| `DO_DEPLOY_SSH_KEY` | SSH private key secret |
+| `DO_DEPLOY_SSH_KEY` | SSH private key for droplet deploy |
+
+Infisical export (Terraform-managed) includes: `DO_DEPLOY_*`, `KEYCLOAK_POSTGRES_BOOTSTRAP_URI`, `KC_*`, admin password, `KEYCLOAK_HOST`.
 
 ### Verify Infisical export locally
 
