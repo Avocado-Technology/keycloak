@@ -127,11 +127,40 @@ jobs:
           set -euo pipefail
           BOOTSTRAP_URI="$(printf '%s' "$BOOTSTRAP_B64" | base64 -d)"
           command -v psql >/dev/null 2>&1 || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-client
-          psql "$BOOTSTRAP_URI" -v ON_ERROR_STOP=1 <<'SQL'
+          run_bootstrap_sql() {
+            psql "$BOOTSTRAP_URI" -v ON_ERROR_STOP=1 <<'SQL'
           GRANT ALL ON SCHEMA public TO keycloak;
           ALTER SCHEMA public OWNER TO keycloak;
           GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;
           SQL
+          }
+          max_attempts=12
+          delay_seconds=5
+          attempt=1
+          while true; do
+            err_file="$(mktemp)"
+            if run_bootstrap_sql 2>"$err_file"; then
+              rm -f "$err_file"
+              break
+            fi
+            err="$(cat "$err_file")"
+            rm -f "$err_file"
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "$err" >&2
+              exit 1
+            fi
+            if echo "$err" | grep -qiE 'remaining connection slots|too many clients|too many connections'; then
+              echo "Attempt ${attempt}/${max_attempts}: Postgres connection limit hit, retrying in ${delay_seconds}s..." >&2
+              sleep "$delay_seconds"
+              attempt=$((attempt + 1))
+              if [ "$delay_seconds" -lt 60 ]; then
+                delay_seconds=$((delay_seconds * 2))
+              fi
+              continue
+            fi
+            echo "$err" >&2
+            exit 1
+          done
           REMOTE
           echo "✓ Postgres schema permissions ensured"
 
