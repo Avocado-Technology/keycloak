@@ -1,4 +1,4 @@
-.PHONY: up down logs validate clean wait test-config test-production test-deploy-workflow infisical-check pull-secrets configure-google-idp e2e-deploy e2e-google
+.PHONY: up down logs validate clean wait test-config test-kamal infisical-check pull-secrets configure-google-idp e2e-deploy e2e-google
 
 COMPOSE ?= docker compose
 
@@ -9,7 +9,7 @@ INFISICAL_SECRET_PATH ?= /keycloak
 INFISICAL_ENV ?= dev
 INFISICAL_PULL_FILE ?= .env.infisical
 INFISICAL_CREDENTIALS_FILE ?= .env.deploy
-INFISICAL_REQUIRED_SECRETS := KC_DB_URL KC_DB_USERNAME KC_DB_PASSWORD KEYCLOAK_ADMIN KEYCLOAK_ADMIN_PASSWORD KEYCLOAK_HOST
+INFISICAL_REQUIRED_SECRETS := KC_DB_URL KC_DB_USERNAME KC_DB_PASSWORD KEYCLOAK_ADMIN KEYCLOAK_ADMIN_PASSWORD KEYCLOAK_HOST KEYCLOAK_POSTGRES_BOOTSTRAP_URI
 
 up:
 	$(COMPOSE) up -d --wait
@@ -43,11 +43,10 @@ test-config:
 	./tests/test_realm_google_idp.sh
 	./tests/test_configure_google_idp.sh
 
-test-production:
-	./tests/test_production_compose.sh
-
-test-deploy-workflow:
-	./tests/test_deploy_workflow.sh
+test-kamal:
+	@chmod +x tests/*.sh
+	./tests/test_kamal_config.sh
+	./tests/test_kamal_workflow.sh
 
 infisical-check:
 	@command -v infisical >/dev/null 2>&1 || (echo "❌ Infisical CLI not installed. Run: brew install infisical/get-cli/infisical" && exit 1)

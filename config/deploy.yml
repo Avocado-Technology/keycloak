@@ -1,0 +1,62 @@
+# Kamal deploy — Keycloak (Traefik on avcd_edge, no kamal-proxy)
+# CI replaces __DO_DEPLOY_HOST__, __DO_DEPLOY_USER__, __DOCR_REGISTRY_SERVER__, __KEYCLOAK_HOST__ before kamal deploy.
+# Uses Infisical OIDC for runtime secrets (/keycloak folder in avcd-infra project).
+
+service: avcd-keycloak
+image: avcd-keycloak
+
+# Keycloak needs time to start and run migrations
+deploy_timeout: 180
+
+ssh:
+  user: __DO_DEPLOY_USER__
+
+servers:
+  web:
+    hosts:
+      - __DO_DEPLOY_HOST__
+    proxy: false
+    options:
+      network: avcd_edge
+      health-cmd: "curl -f http://localhost:8080/realms/avcd/.well-known/openid-configuration || exit 1"
+      health-interval: 30s
+      health-retries: 5
+      health-timeout: 10s
+      health-start-period: 120s
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: avcd_edge
+      traefik.http.routers.avcd-keycloak.rule: Host(`__KEYCLOAK_HOST__`)
+      traefik.http.routers.avcd-keycloak.entrypoints: websecure
+      traefik.http.routers.avcd-keycloak.tls: "true"
+      traefik.http.routers.avcd-keycloak.tls.certresolver: le
+      traefik.http.routers.avcd-keycloak.priority: "100"
+      traefik.http.routers.avcd-keycloak.service: avcd-keycloak
+      traefik.http.services.avcd-keycloak.loadbalancer.server.port: "8080"
+
+registry:
+  server: __DOCR_REGISTRY_SERVER__
+  username:
+    - DOCR_USERNAME
+  password:
+    - REGISTRY_PASSWORD
+
+builder:
+  arch: amd64
+  context: .
+  dockerfile: Dockerfile
+
+env:
+  secret:
+    - KC_DB_URL
+    - KC_DB_USERNAME
+    - KC_DB_PASSWORD
+    - KEYCLOAK_ADMIN_PASSWORD
+  clear:
+    KC_DB: postgres
+    KEYCLOAK_ADMIN: admin
+    KC_HOSTNAME: __KEYCLOAK_HOST__
+    KC_HOSTNAME_STRICT: "true"
+    KC_PROXY_HEADERS: xforwarded
+    KC_HTTP_ENABLED: "true"
+    KC_HEALTH_ENABLED: "true"

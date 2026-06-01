@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Kamal pre-deploy hook — ensure avcd_edge network exists
+set -euo pipefail
+
+DEPLOY_HOST="${1:-}"
+if [ -z "$DEPLOY_HOST" ]; then
+  echo "Error: DEPLOY_HOST not provided" >&2
+  exit 1
+fi
+
+echo "Ensuring avcd_edge network exists on $DEPLOY_HOST..."
+ssh "${KAMAL_DEPLOY_USER:-deploy}@${DEPLOY_HOST}" \
+  "docker network inspect avcd_edge >/dev/null 2>&1 || docker network create --driver bridge avcd_edge" || {
+    echo "Warning: Could not ensure avcd_edge network (may already exist or SSH not ready)" >&2
+  }
+
+echo "Pre-deploy network check complete"

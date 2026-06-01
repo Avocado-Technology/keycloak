@@ -5,3 +5,6 @@
 data/
 *.log
 .DS_Store
+
+# Kamal secrets (generated at deploy time, should never be committed)
+.kamal/secrets
