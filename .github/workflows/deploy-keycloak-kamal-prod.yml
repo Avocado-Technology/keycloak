@@ -143,8 +143,17 @@ jobs:
           sed -i "s|__KEYCLOAK_IMAGE_TAG__|${TAG}|g" config/deploy.yml
           sed -i "s|__DO_DEPLOY_USER__|${USER}|g" config/deploy.yml
 
+      # Internal org repo — checkout locally (remote `uses: org/repo` fails on hosted runners).
+      - name: Checkout avcd-actions
+        uses: actions/checkout@v4
+        with:
+          repository: Avocado-Technology/avcd-actions
+          ref: main
+          path: avcd-actions
+          token: ${{ secrets.GH_INFRA_TOKEN }}
+
       - name: Deploy Keycloak with Kamal
-        uses: Avocado-Technology/avcd-actions/kamal-deploy@v5
+        uses: ./avcd-actions/kamal-deploy
         with:
           deploy_host: ${{ steps.infisical.outputs.deploy_host }}
           deploy_user: ${{ steps.infisical.outputs.deploy_user }}
