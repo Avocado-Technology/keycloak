@@ -9,14 +9,8 @@
 
 name: Deploy Keycloak to DigitalOcean (dev) — Kamal
 
+# Prod-only deploy: auth.avcd.ai on infra droplet. Dev workflow kept for manual dispatch only.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "config/**"
-      - "Dockerfile"
-      - ".kamal/**"
-      - ".github/workflows/deploy-keycloak-kamal-dev.yml"
   workflow_dispatch:
     inputs:
       kamal_command:

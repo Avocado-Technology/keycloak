@@ -4,7 +4,7 @@ COMPOSE ?= docker compose
 
 # Infisical — shared infra project (avcd-infra), folder /keycloak
 INFISICAL_API_URL ?= https://secrets.dev.avcd.ai/api
-INFISICAL_PROJECT_ID ?= 802aad98-56e1-4b3e-a0a9-68b3bfec4537
+INFISICAL_PROJECT_ID ?= db036f0e-7452-4e17-9573-e5471b45d65f
 INFISICAL_SECRET_PATH ?= /keycloak
 INFISICAL_ENV ?= dev
 INFISICAL_PULL_FILE ?= .env.infisical

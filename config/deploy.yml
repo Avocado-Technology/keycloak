@@ -1,11 +1,11 @@
 # Kamal deploy — Keycloak (Traefik on avcd_edge, no kamal-proxy)
-# CI replaces __DO_DEPLOY_HOST__, __DO_DEPLOY_USER__, __DOCR_REGISTRY_SERVER__, __KEYCLOAK_HOST__ before kamal deploy.
-# Uses Infisical OIDC for runtime secrets (/keycloak folder in avcd-infra project).
+# CI replaces placeholders before kamal deploy. Image: official Quay (no custom build).
+# Secrets via Infisical OIDC (/keycloak folder in infra project, prod env).
 
 service: avcd-keycloak
-image: avcd-keycloak
+image: quay.io/keycloak/keycloak:__KEYCLOAK_IMAGE_TAG__
+cmd: start
 
-# Keycloak needs time to start and run migrations
 deploy_timeout: 180
 
 ssh:
@@ -14,11 +14,11 @@ ssh:
 servers:
   web:
     hosts:
-      - __DO_DEPLOY_HOST__
+      - __KEYCLOAK_DEPLOY_HOST__
     proxy: false
     options:
       network: avcd_edge
-      health-cmd: "curl -f http://localhost:8080/realms/avcd/.well-known/openid-configuration || exit 1"
+      health-cmd: "curl -f http://localhost:8080/health/ready || exit 1"
       health-interval: 30s
       health-retries: 5
       health-timeout: 10s
@@ -35,16 +35,7 @@ servers:
       traefik.http.services.avcd-keycloak.loadbalancer.server.port: "8080"
 
 registry:
-  server: __DOCR_REGISTRY_SERVER__
-  username:
-    - DOCR_USERNAME
-  password:
-    - REGISTRY_PASSWORD
-
-builder:
-  arch: amd64
-  context: .
-  dockerfile: Dockerfile
+  server: quay.io
 
 env:
   secret:

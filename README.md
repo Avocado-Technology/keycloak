@@ -42,11 +42,11 @@ AVCD realm OIDC discovery: http://localhost:8080/realms/avcd/.well-known/openid-
 | Environment | Source of truth | Mechanism |
 |-------------|-----------------|-----------|
 | **Local** | `config/avcd-realm.json` | `--import-realm` on first boot (`docker-compose.yml`) |
-| **Deployed dev** | `avcd-infra/modules/keycloak-config` | Terraform via `keycloak-config-apply.yml` |
+| **Deployed prod** | `avcd-infra/modules/keycloak-config` | Terraform (realm apply is out of scope for Kamal deploy) |
 
 Local realm settings are imported from `config/avcd-realm.json` on first boot (`--import-realm`).
 
-Deployed Keycloak (`auth.dev.avcd.ai`) does **not** use JSON import. After deploy, run the **avcd-infra** `keycloak-config-apply` workflow (or push to `main`) to create/update the `avcd` realm, clients, and Google IdP.
+Production Keycloak runs at **`https://auth.avcd.ai`** via Kamal (`deploy-keycloak-kamal-prod.yml`), official image `quay.io/keycloak/keycloak`, secrets from Infisical **`/keycloak`** (prod). No `KC_*` GitHub secrets — OIDC variables only on the `production` environment.
 
 `config/avcd-realm.prod.json` is **deprecated** (reference only). Keep local JSON aligned with Terraform when adding clients for local dev.
 
@@ -65,18 +65,20 @@ To capture Admin UI changes back to git:
 | `mcp` | Public PKCE client `avcd-mcp` |
 | `traefik` | Route `auth.dev.avcd.ai` to Keycloak (via deploy compose labels) |
 
-## Dev deployment
+## Production deployment (Kamal)
 
-See `deploy/production/docker-compose.yml` and `.github/workflows/deploy-keycloak-dev.yml`.
+Bootstrap order is documented in [`pulumi-infra/README.md`](../pulumi-infra/README.md) (Keycloak bootstrap section).
 
 ```bash
-make test-production      # static checks for prod compose
-make test-deploy-workflow # static checks for deploy workflow
-make pull-secrets         # export Infisical infra project /keycloak → .env.infisical
-KEYCLOAK_HOST=auth.dev.avcd.ai make e2e-deploy
+# After pulumi-infra stacks and Infisical /keycloak are populated:
+gh workflow run deploy-keycloak-kamal-prod.yml -R Avocado-Technology/keycloak -f kamal_command=setup
+gh workflow run deploy-keycloak-kamal-prod.yml -R Avocado-Technology/keycloak -f kamal_command=deploy
+bash ../pulumi-infra/tests/e2e/verify-keycloak-deploy.sh
 ```
 
-GitHub Environment `development` needs `KEYCLOAK_INFISICAL_*` and `DO_DEPLOY_*` secrets (see `.cursor/skills/security/keycloak-local/SKILL.md`). On **avcd-infra**, set repo variable `TF_VAR_enable_keycloak_dev=true` so Terraform apply keeps Keycloak resources in sync.
+GitHub **variables** on `production`: `INFISICAL_OIDC_IDENTITY_ID`, `INFISICAL_INFRA_PROJECT_ID`, `INFISICAL_API_URL`, `INFISICAL_SECRET_PATH=/keycloak`, `INFISICAL_OIDC_AUDIENCE`. SSH key comes from Infisical `/ci-bootstrap` (`DO_DEPLOY_SSH_KEY`), not GitHub Secrets.
+
+`deploy-keycloak-kamal-dev.yml` is **workflow_dispatch only** (legacy dev host disabled).
 
 ## Troubleshooting
 

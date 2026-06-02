@@ -1,11 +1,6 @@
-# Deploy Keycloak via Kamal (Docker + Traefik on avcd_edge, no kamal-proxy) — PRODUCTION
-# Uses Infisical OIDC for secrets (/keycloak folder in avcd-infra project, prod env).
-#
-# Required GitHub Environment Secrets (production environment):
-#   DO_DEPLOY_SSH_KEY (for SSH to droplet)
-#
-# Required GitHub Environment Variables:
-#   INFISICAL_OIDC_IDENTITY_ID (for OIDC auth with Infisical)
+# Deploy Keycloak via Kamal — PRODUCTION (auth.avcd.ai)
+# Infisical OIDC only: no KC_* or deploy credentials in GitHub Secrets.
+# SSH key from Infisical /ci-bootstrap; app secrets from /keycloak (prod).
 
 name: Deploy Keycloak to DigitalOcean (prod) — Kamal
 
@@ -14,7 +9,6 @@ on:
     branches: [main]
     paths:
       - "config/**"
-      - "Dockerfile"
       - ".kamal/**"
       - ".github/workflows/deploy-keycloak-kamal-prod.yml"
   workflow_dispatch:
@@ -55,158 +49,117 @@ jobs:
         id: infisical
         env:
           INFISICAL_API_URL: ${{ vars.INFISICAL_API_URL || 'https://secrets.avcd.ai/api' }}
-          INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_INFRA_PROJECT_ID || 'e9b80cfd-9be4-4024-a1d6-753db87bc3b9' }}
+          INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_INFRA_PROJECT_ID || 'db036f0e-7452-4e17-9573-e5471b45d65f' }}
           INFISICAL_SECRET_PATH: ${{ vars.INFISICAL_SECRET_PATH || '/keycloak' }}
           INFISICAL_ENV: ${{ vars.INFISICAL_ENV || 'prod' }}
           INFISICAL_OIDC_IDENTITY_ID: ${{ vars.INFISICAL_OIDC_IDENTITY_ID }}
-          INFISICAL_OIDC_AUDIENCE: ${{ vars.INFISICAL_OIDC_AUDIENCE || 'https://github.com/Avocado-Technology' }}
+          INFISICAL_OIDC_AUDIENCE: ${{ vars.INFISICAL_OIDC_AUDIENCE || 'https://secrets.avcd.ai' }}
         run: |
           set -euo pipefail
           [ -n "${INFISICAL_OIDC_IDENTITY_ID:-}" ] || { echo "::error::Set INFISICAL_OIDC_IDENTITY_ID on production environment"; exit 1; }
-          
+
           OIDC_JWT=$(curl -sS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${INFISICAL_OIDC_AUDIENCE}" | jq -r .value)
           if [ -z "${OIDC_JWT:-}" ] || [ "$OIDC_JWT" = "null" ]; then
             echo "::error::Failed to obtain GitHub OIDC token"
             exit 1
           fi
-          
+
           export INFISICAL_TOKEN=$(infisical login --method=oidc-auth \
             --machine-identity-id="$INFISICAL_OIDC_IDENTITY_ID" \
             --oidc-jwt="$OIDC_JWT" \
             --domain="${INFISICAL_API_URL%/api}" --silent --plain)
-          
+
+          DOMAIN="${INFISICAL_API_URL%/api}"
           infisical export --env="${INFISICAL_ENV}" --path="${INFISICAL_SECRET_PATH}" \
             --projectId="$INFISICAL_PROJECT_ID" --token="$INFISICAL_TOKEN" \
-            --format=dotenv --domain="${INFISICAL_API_URL%/api}" --silent \
-            > .env.infisical
-          
-          test -s .env.infisical || { echo "::error::Infisical export empty"; exit 1; }
-          
-          # Extract and output key values for subsequent steps
+            --format=dotenv --domain="$DOMAIN" --silent > .env.keycloak
+
+          infisical export --env="${INFISICAL_ENV}" --path="/ci-bootstrap" \
+            --projectId="$INFISICAL_PROJECT_ID" --token="$INFISICAL_TOKEN" \
+            --format=dotenv --domain="$DOMAIN" --silent > .env.bootstrap
+
+          test -s .env.keycloak || { echo "::error::Infisical /keycloak export empty"; exit 1; }
+          test -s .env.bootstrap || { echo "::error::Infisical /ci-bootstrap export empty"; exit 1; }
+
           set -a
-          source .env.infisical
+          # shellcheck disable=SC1091
+          source .env.keycloak
+          source .env.bootstrap
           set +a
-          
-          echo "keycloak_host=${KEYCLOAK_HOST}" >> "$GITHUB_OUTPUT"
-          echo "discovery_url=https://${KEYCLOAK_HOST}/realms/avcd/.well-known/openid-configuration" >> "$GITHUB_OUTPUT"
-          echo "deploy_host=${DO_DEPLOY_HOST}" >> "$GITHUB_OUTPUT"
-          echo "deploy_user=${DO_DEPLOY_USER:-deploy}" >> "$GITHUB_OUTPUT"
-          echo "postgres_bootstrap_uri=${KEYCLOAK_POSTGRES_BOOTSTRAP_URI}" >> "$GITHUB_OUTPUT"
-          
-          echo "✓ Infisical export ready (prod)"
+
+          [ -n "${DO_DEPLOY_SSH_KEY:-}" ] || { echo "::error::DO_DEPLOY_SSH_KEY missing in /ci-bootstrap"; exit 1; }
+
+          {
+            echo "keycloak_host=${KEYCLOAK_HOST}"
+            echo "keycloak_image_tag=${KEYCLOAK_IMAGE_TAG:-26.0}"
+            echo "deploy_host=${DO_DEPLOY_HOST}"
+            echo "deploy_user=${DO_DEPLOY_USER:-deploy}"
+            echo "postgres_bootstrap_uri=${KEYCLOAK_POSTGRES_BOOTSTRAP_URI:-}"
+          } >> "$GITHUB_OUTPUT"
+
+          umask 077
+          printf '%s\n' "$DO_DEPLOY_SSH_KEY" > .deploy_ssh_key
+          {
+            echo 'ssh_key<<EOF'
+            cat .deploy_ssh_key
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Ensure Postgres schema permissions (idempotent)
+        if: steps.infisical.outputs.postgres_bootstrap_uri != ''
         env:
-          SSH_KEY: ${{ secrets.DO_DEPLOY_SSH_KEY }}
+          SSH_KEY_FILE: .deploy_ssh_key
           BOOTSTRAP_URI: ${{ steps.infisical.outputs.postgres_bootstrap_uri }}
         run: |
           set -euo pipefail
-          [ -n "${SSH_KEY:-}" ] || { echo "::error::DO_DEPLOY_SSH_KEY missing"; exit 1; }
-          [ -n "${BOOTSTRAP_URI:-}" ] || { echo "::error::KEYCLOAK_POSTGRES_BOOTSTRAP_URI not found in Infisical"; exit 1; }
-          
-          install -d -m 700 ~/.ssh
-          umask 077
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          
           DEPLOY_HOST="${{ steps.infisical.outputs.deploy_host }}"
           DEPLOY_USER="${{ steps.infisical.outputs.deploy_user }}"
-          
+          chmod 600 "$SSH_KEY_FILE"
           ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-          
           BOOTSTRAP_B64=$(printf '%s' "$BOOTSTRAP_URI" | base64 -w0)
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+          ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new \
             "${DEPLOY_USER}@${DEPLOY_HOST}" "BOOTSTRAP_B64='$BOOTSTRAP_B64' bash -s" <<'REMOTE'
           set -euo pipefail
           BOOTSTRAP_URI="$(printf '%s' "$BOOTSTRAP_B64" | base64 -d)"
           command -v psql >/dev/null 2>&1 || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-client
-          run_bootstrap_sql() {
-            psql "$BOOTSTRAP_URI" -v ON_ERROR_STOP=1 <<'SQL'
+          psql "$BOOTSTRAP_URI" -v ON_ERROR_STOP=1 <<'SQL'
           GRANT ALL ON SCHEMA public TO keycloak;
           ALTER SCHEMA public OWNER TO keycloak;
           GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;
           SQL
-          }
-          max_attempts=12
-          delay_seconds=5
-          attempt=1
-          while true; do
-            err_file="$(mktemp)"
-            if run_bootstrap_sql 2>"$err_file"; then
-              rm -f "$err_file"
-              break
-            fi
-            err="$(cat "$err_file")"
-            rm -f "$err_file"
-            if [ "$attempt" -ge "$max_attempts" ]; then
-              echo "$err" >&2
-              exit 1
-            fi
-            if echo "$err" | grep -qiE 'remaining connection slots|too many clients|too many connections'; then
-              echo "Attempt ${attempt}/${max_attempts}: Postgres connection limit hit, retrying in ${delay_seconds}s..." >&2
-              sleep "$delay_seconds"
-              attempt=$((attempt + 1))
-              if [ "$delay_seconds" -lt 60 ]; then
-                delay_seconds=$((delay_seconds * 2))
-              fi
-              continue
-            fi
-            echo "$err" >&2
-            exit 1
-          done
           REMOTE
-          echo "✓ Postgres schema permissions ensured (prod)"
+          echo "✓ Postgres schema permissions ensured"
 
-      - name: Preprocess deploy.yml with KEYCLOAK_HOST
+      - name: Preprocess deploy.yml
         run: |
-          KEYCLOAK_HOST="${{ steps.infisical.outputs.keycloak_host }}"
-          [ -n "$KEYCLOAK_HOST" ] || { echo "::error::KEYCLOAK_HOST not found"; exit 1; }
-          
-          # Replace __KEYCLOAK_HOST__ placeholder with actual value
-          sed -i "s|__KEYCLOAK_HOST__|$KEYCLOAK_HOST|g" config/deploy.yml
-          
-          echo "Processed deploy.yml (replaced __KEYCLOAK_HOST__ with $KEYCLOAK_HOST)"
+          set -euo pipefail
+          HOST="${{ steps.infisical.outputs.keycloak_host }}"
+          TAG="${{ steps.infisical.outputs.keycloak_image_tag }}"
+          DEPLOY="${{ steps.infisical.outputs.deploy_host }}"
+          USER="${{ steps.infisical.outputs.deploy_user }}"
+          sed -i "s|__KEYCLOAK_HOST__|${HOST}|g" config/deploy.yml
+          sed -i "s|__KEYCLOAK_DEPLOY_HOST__|${DEPLOY}|g" config/deploy.yml
+          sed -i "s|__KEYCLOAK_IMAGE_TAG__|${TAG}|g" config/deploy.yml
+          sed -i "s|__DO_DEPLOY_USER__|${USER}|g" config/deploy.yml
 
       - name: Deploy Keycloak with Kamal
         uses: Avocado-Technology/avcd-actions/kamal-deploy@v5
         with:
           deploy_host: ${{ steps.infisical.outputs.deploy_host }}
           deploy_user: ${{ steps.infisical.outputs.deploy_user }}
-          ssh_key: ${{ secrets.DO_DEPLOY_SSH_KEY }}
-          docr_registry_url: ${{ vars.DOCR_REGISTRY_URL }}
+          ssh_key: ${{ steps.infisical.outputs.ssh_key }}
+          docr_registry_url: quay.io
           infisical_api_url: ${{ vars.INFISICAL_API_URL || 'https://secrets.avcd.ai/api' }}
-          infisical_project_id: ${{ vars.INFISICAL_INFRA_PROJECT_ID || 'e9b80cfd-9be4-4024-a1d6-753db87bc3b9' }}
-          infisical_infra_project_id: ${{ vars.INFISICAL_INFRA_PROJECT_ID || 'e9b80cfd-9be4-4024-a1d6-753db87bc3b9' }}
+          infisical_project_id: ${{ vars.INFISICAL_INFRA_PROJECT_ID || 'db036f0e-7452-4e17-9573-e5471b45d65f' }}
+          infisical_infra_project_id: ${{ vars.INFISICAL_INFRA_PROJECT_ID || 'db036f0e-7452-4e17-9573-e5471b45d65f' }}
           infisical_oidc_identity_id: ${{ vars.INFISICAL_OIDC_IDENTITY_ID }}
-          infisical_oidc_audience: ${{ vars.INFISICAL_OIDC_AUDIENCE || 'https://github.com/Avocado-Technology' }}
+          infisical_oidc_audience: ${{ vars.INFISICAL_OIDC_AUDIENCE || 'https://secrets.avcd.ai' }}
           infisical_secrets_path: /keycloak
           secrets_template_path: .kamal/secrets.ci.template
           kamal_version: ${{ vars.KAMAL_VERSION || '2.5.3' }}
           kamal_command: ${{ github.event_name == 'workflow_dispatch' && inputs.kamal_command || 'deploy' }}
-          kamal_destination: production
-          docr_username: ${{ secrets.DOCR_USERNAME }}
-          docr_password: ${{ secrets.DOCR_PASSWORD }}
-          verify_url: ${{ steps.infisical.outputs.discovery_url }}
-          verify_body_substring: '"issuer"'
-
-  apply-keycloak-config:
-    needs: deploy
-    runs-on: ubuntu-latest
-    environment: production
-    continue-on-error: true
-    steps:
-      - name: Trigger avcd-infra Keycloak config apply
-        env:
-          GH_TOKEN: ${{ secrets.GH_TERRAFORM_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -z "${GH_TOKEN:-}" ]; then
-            echo "::warning::GH_TERRAFORM_TOKEN missing — skip cross-repo keycloak-config trigger"
-            exit 0
-          fi
-          gh workflow run keycloak-config-apply.yml -R Avocado-Technology/avcd-infra --ref main
-          sleep 8
-          RUN_ID="$(gh run list -R Avocado-Technology/avcd-infra -w "Keycloak Config Apply" -L 1 --json databaseId -q '.[0].databaseId')"
-          echo "Watching avcd-infra run ${RUN_ID}"
-          gh run watch "$RUN_ID" -R Avocado-Technology/avcd-infra --exit-status
+          skip_registry_login: "true"
+          keycloak_host: ${{ steps.infisical.outputs.keycloak_host }}
+          keycloak_image_tag: ${{ steps.infisical.outputs.keycloak_image_tag }}
+          verify_url: https://${{ steps.infisical.outputs.keycloak_host }}/health/ready
