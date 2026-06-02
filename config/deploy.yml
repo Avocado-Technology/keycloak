@@ -5,7 +5,6 @@
 
 service: avcd-keycloak
 image: quay.io/keycloak/keycloak:__KEYCLOAK_IMAGE_TAG__
-cmd: start
 
 deploy_timeout: 180
 
@@ -16,6 +15,7 @@ servers:
   web:
     hosts:
       - __KEYCLOAK_DEPLOY_HOST__
+    cmd: start
     proxy: false
     options:
       network: avcd_edge
