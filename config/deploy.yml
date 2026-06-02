@@ -37,7 +37,14 @@ servers:
       traefik.http.routers.avcd-keycloak.service: avcd-keycloak
       traefik.http.services.avcd-keycloak.loadbalancer.server.port: "8080"
 
-# No registry block — public quay.io image; CI sets skip_registry_login (no DOCR login).
+# Kamal requires registry username/password (validates before deploy). CI skips runner
+# docker login (skip_registry_login); remote pull uses public quay.io image.
+registry:
+  server: quay.io
+  username:
+    - DOCR_USERNAME
+  password:
+    - REGISTRY_PASSWORD
 
 env:
   secret:
