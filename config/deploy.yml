@@ -37,8 +37,7 @@ servers:
       traefik.http.routers.avcd-keycloak.service: avcd-keycloak
       traefik.http.services.avcd-keycloak.loadbalancer.server.port: "8080"
 
-registry:
-  server: quay.io
+# No registry block — public quay.io image; CI sets skip_registry_login (no DOCR login).
 
 env:
   secret:
