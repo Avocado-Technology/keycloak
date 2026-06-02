@@ -130,11 +130,41 @@ else
 fi
 
 # Test 11: .gitignore includes .kamal/secrets
-echo "[11/11] Checking .gitignore for .kamal/secrets..."
+echo "[11/14] Checking .gitignore for .kamal/secrets..."
 if grep -q '.kamal/secrets' "$GITIGNORE"; then
     echo "  ✓ .gitignore excludes .kamal/secrets"
 else
     echo "  ✗ .gitignore should exclude .kamal/secrets"
+    ((errors++))
+fi
+
+# Test 12: Docker health uses bash TCP probe on port 9000 (not curl on 8080)
+echo "[12/14] Checking Docker health-cmd (bash :9000, no curl)..."
+if grep -q 'health-cmd' "$DEPLOY_YML" && \
+   ! grep -q 'curl' "$DEPLOY_YML" && \
+   grep -q '/dev/tcp/127.0.0.1/9000' "$DEPLOY_YML" && \
+   grep -q '/health/ready' "$DEPLOY_YML"; then
+    echo "  ✓ health-cmd uses bash TCP probe on port 9000"
+else
+    echo "  ✗ health-cmd should use bash /dev/tcp on 9000 without curl"
+    ((errors++))
+fi
+
+# Test 13: KC_HEALTH_ENABLED present
+echo "[13/14] Checking KC_HEALTH_ENABLED..."
+if grep -q 'KC_HEALTH_ENABLED' "$DEPLOY_YML"; then
+    echo "  ✓ KC_HEALTH_ENABLED configured"
+else
+    echo "  ✗ KC_HEALTH_ENABLED not found"
+    ((errors++))
+fi
+
+# Test 14: deploy_timeout allows Keycloak startup
+echo "[14/14] Checking deploy_timeout..."
+if grep -q 'deploy_timeout: 180' "$DEPLOY_YML"; then
+    echo "  ✓ deploy_timeout is 180s"
+else
+    echo "  ✗ deploy_timeout should be 180"
     ((errors++))
 fi
 

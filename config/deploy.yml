@@ -1,6 +1,7 @@
 # Kamal deploy — Keycloak (Traefik on avcd_edge, no kamal-proxy)
 # CI replaces placeholders before kamal deploy. Image: official Quay (no custom build).
 # Secrets via Infisical OIDC (/keycloak folder in infra project, prod env).
+# Docker health: Keycloak bash TCP probe on management port 9000 (see keycloak.org/observability/health).
 
 service: avcd-keycloak
 image: quay.io/keycloak/keycloak:__KEYCLOAK_IMAGE_TAG__
@@ -18,10 +19,12 @@ servers:
     proxy: false
     options:
       network: avcd_edge
-      health-cmd: "curl -f http://localhost:8080/health/ready || exit 1"
-      health-interval: 30s
-      health-retries: 5
-      health-timeout: 10s
+      health-cmd: >-
+        bash -c '{ printf "HEAD /health/ready HTTP/1.0\r\n\r\n" >&0;
+        grep -q "HTTP/1.0 200"; } 0<>/dev/tcp/127.0.0.1/9000'
+      health-interval: 15s
+      health-retries: 8
+      health-timeout: 5s
       health-start-period: 120s
     labels:
       traefik.enable: "true"

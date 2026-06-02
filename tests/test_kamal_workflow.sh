@@ -52,6 +52,11 @@ else
 fi
 check "prod skip_registry_login quay" grep -q 'skip_registry_login' "$PROD_WORKFLOW"
 check "prod health verify URL" grep -q 'health/ready' "$PROD_WORKFLOW"
+check "prod Set Kamal verify URL step" grep -q 'Set Kamal verify URL' "$PROD_WORKFLOW"
+check "prod verify_url from kamal_verify output" grep -q 'steps.kamal_verify.outputs.url' "$PROD_WORKFLOW"
+check "prod skips verify on setup" grep -q 'kamal_command' "$PROD_WORKFLOW" && \
+  grep -q 'deploy.*redeploy' "$PROD_WORKFLOW" && \
+  ! grep -q 'verify_url: https://\${{ steps.infisical.outputs.keycloak_host }}' "$PROD_WORKFLOW"
 check "prod preprocess deploy.yml placeholders" grep -q '__KEYCLOAK_HOST__' "$PROD_WORKFLOW"
 
 echo ""
