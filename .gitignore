@@ -1,6 +1,7 @@
 .env
 .env.deploy
 .env.infisical
+.env.keycloak.prod
 .venv/
 data/
 *.log
