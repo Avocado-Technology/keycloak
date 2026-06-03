@@ -57,7 +57,7 @@ AVCD realm OIDC discovery: http://localhost:8080/realms/avcd/.well-known/openid-
 
 Local realm settings are imported from `config/avcd-realm.json` on first boot (`--import-realm`).
 
-Shared Keycloak runs at **`https://auth.avcd.ai`** via Kamal (`deploy-keycloak-kamal-prod.yml`), official image `quay.io/keycloak/keycloak`, secrets from Infisical **`/keycloak`** in `avcd-infra` (Infisical env slug `prod` = infra host secrets, not a second IdP). No `KC_*` GitHub secrets — OIDC variables on the `production` GitHub environment for CI only.
+Shared Keycloak runs at **`https://auth.avcd.ai`** via Kamal (`deploy-keycloak-kamal-prod.yml`), official image `quay.io/keycloak/keycloak`, deploy secrets from Infisical **`/keycloak`** (written by this repo’s [`pulumi/`](pulumi/) stack `avcd-keycloak/secrets` via [`sync-infisical-secrets.yml`](.github/workflows/sync-infisical-secrets.yml); Infisical env slug `prod` = infra host catalog, not a second IdP). No `KC_*` GitHub secrets — OIDC variables on the `production` GitHub environment for CI only.
 
 `config/avcd-realm.prod.json` is **deprecated** (reference only). Keep local JSON aligned with Terraform when adding clients for local dev.
 
