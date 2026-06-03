@@ -3,8 +3,11 @@
 set -euo pipefail
 
 DEPLOY_HOST="${1:-}"
+if [ -z "$DEPLOY_HOST" ] && [ -n "${KAMAL_HOSTS:-}" ]; then
+  DEPLOY_HOST="${KAMAL_HOSTS%%,*}"
+fi
 if [ -z "$DEPLOY_HOST" ]; then
-  echo "Error: DEPLOY_HOST not provided" >&2
+  echo "Error: set KAMAL_HOSTS or pass deploy host as first argument" >&2
   exit 1
 fi
 
