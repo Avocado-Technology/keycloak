@@ -13,7 +13,7 @@ Validates the complete browser flow: user clicks Continue with Google, authentic
 
 - [ ] Google Cloud Console has Keycloak broker redirect URIs:
   - Local: `http://localhost:8080/realms/avcd/broker/google/endpoint`
-  - Dev: `https://auth.dev.avcd.ai/realms/avcd/broker/google/endpoint`
+  - Shared infra IdP: `https://auth.avcd.ai/realms/avcd/broker/google/endpoint`
 - [ ] `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` set in Infisical `/keycloak` or local `.env`
 - [ ] `./scripts/configure-google-idp.sh` completed successfully
 - [ ] Web app configured with `KEYCLOAK_*` env vars

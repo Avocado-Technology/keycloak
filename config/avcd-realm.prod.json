@@ -1,5 +1,5 @@
 {
-  "_deprecated": "DEPRECATED — deployed Keycloak IdP config is managed by avcd-infra modules/keycloak-config Terraform. Local dev uses config/avcd-realm.json only.",
+  "_deprecated": "DEPRECATED — production IdP is managed by pulumi-infra stack keycloak-config (@pulumi/keycloak). Local dev uses config/avcd-realm.json only. Archive reference: infra/modules/keycloak-config.",
   "realm": "avcd",
   "enabled": true,
   "sslRequired": "external",

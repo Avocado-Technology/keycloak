@@ -1,6 +1,6 @@
-# Kamal deploy — Keycloak (Traefik on avcd_edge, no kamal-proxy)
-# CI replaces placeholders before kamal deploy. Image: official Quay (no custom build).
-# Secrets via Infisical OIDC (/keycloak folder in infra project, prod env).
+# Kamal deploy — single Keycloak on infra (auth.avcd.ai); dev/prod apps use this URL.
+# CI renders placeholders, builds via Dockerfile (FROM quay.io/keycloak/keycloak:26.0), pushes to localhost:5555 on the droplet.
+# Secrets via Infisical OIDC (/keycloak in avcd-infra; INFISICAL_ENV prod = infra host slug).
 # Docker health: Keycloak bash TCP probe on management port 9000 (see keycloak.org/observability/health).
 
 service: avcd-keycloak

@@ -82,61 +82,23 @@ issuer = f"{settings.keycloak_url}/realms/avcd"
 - [Keycloak Docker guide](https://www.keycloak.org/server/containers)
 - [Realm import](https://www.keycloak.org/server/importExport)
 
-## Dev Deployment (DigitalOcean)
+## Infra deployment (shared IdP)
 
-Production deploy uses `deploy/production/docker-compose.yml` on the dev droplet behind Traefik at `auth.dev.avcd.ai`.
+One Keycloak on the infra stack at **`https://auth.avcd.ai`** (same pattern as Infisical at `secrets.avcd.ai`). Dev and prod **applications** point at that URL; there is no second Keycloak droplet or `auth.dev.avcd.ai` deploy.
 
-### Prerequisites (infra Phase 1)
-
-- Terraform `enable_keycloak_dev=true` applied (Postgres DB/user, Infisical secrets in infra project, DNS)
-- Infisical **infra project** (`avcd-infra`): `802aad98-56e1-4b3e-a0a9-68b3bfec4537`, secrets folder **`/keycloak`**
-- Machine Identity with Universal Auth and read access to `/keycloak` in the infra project (reuse infra Terraform MI or create in UI)
-- **One-time Postgres grant** (DO Managed PG 15+): from the dev droplet as `doadmin`:
-
-```bash
-psql "postgresql://doadmin@<postgres-host>:25060/keycloak?sslmode=require" -v ON_ERROR_STOP=1 <<'SQL'
-GRANT ALL ON SCHEMA public TO keycloak;
-ALTER SCHEMA public OWNER TO keycloak;
-GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;
-SQL
-```
-
-### GitHub Environment `development` (keycloak repo)
-
-Bootstrap only — app and deploy config live in Infisical `/keycloak` (see `infra/.cursor/skills/secrets-architecture/SKILL.md`):
-
-```bash
-cd ../infra
-./scripts/sync-github-bootstrap.sh keycloak
-```
-
-Requires `gh auth login` with **repo + admin:repo** (secrets write). Reads Infisical MI from `infra/.env`.
-
-| Secret | Purpose |
-|--------|---------|
-| `KEYCLOAK_INFISICAL_CLIENT_ID` | MI Universal Auth client ID |
-| `KEYCLOAK_INFISICAL_CLIENT_SECRET` | MI Universal Auth client secret |
-| `DO_DEPLOY_SSH_KEY` | SSH private key for droplet deploy |
-
-Infisical export (Terraform-managed) includes: `DO_DEPLOY_*`, `KEYCLOAK_POSTGRES_BOOTSTRAP_URI`, `KC_*`, admin password, `KEYCLOAK_HOST`.
-
-### Verify Infisical export locally
-
-```bash
-export KEYCLOAK_INFISICAL_CLIENT_ID=...
-export KEYCLOAK_INFISICAL_CLIENT_SECRET=...
-make pull-secrets
-grep KC_DB_URL .env.infisical
-```
-
-### Deploy
-
-Push to `main` (paths under `deploy/` or `config/`) or run `Deploy Keycloak to DigitalOcean (dev)` workflow.
+| Layer | Tool | Notes |
+|-------|------|-------|
+| Infra | `pulumi-infra` stack `infra` | Postgres, DNS `auth.avcd.ai` |
+| Secrets | Infisical `avcd-infra` `/keycloak` | Kamal env from OIDC in CI |
+| Process | `deploy-keycloak-kamal-prod.yml` | Kamal + Traefik on `avcd_edge` |
+| Realm/clients | `infra/modules/keycloak-config` or Pulumi | IdP-as-code against `auth.avcd.ai` |
 
 Post-deploy E2E:
 
 ```bash
-KEYCLOAK_HOST=auth.dev.avcd.ai make e2e-deploy
+KEYCLOAK_HOST=auth.avcd.ai make e2e-deploy
 ```
 
-Expected: `DEPLOY E2E PASS` and issuer `https://auth.dev.avcd.ai/realms/avcd`.
+Expected: `DEPLOY E2E PASS` and issuer `https://auth.avcd.ai/realms/avcd`.
+
+Do **not** run `deploy-keycloak-kamal-dev.yml` — it is deprecated and exits with an error.

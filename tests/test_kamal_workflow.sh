@@ -4,9 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-DEV_WORKFLOW="$REPO_DIR/.github/workflows/deploy-keycloak-kamal-dev.yml"
 PROD_WORKFLOW="$REPO_DIR/.github/workflows/deploy-keycloak-kamal-prod.yml"
-PROJECT_ID="db036f0e-7452-4e17-9573-e5471b45d65f"
 LEGACY_PROJECT_ID="802aad98-56e1-4b3e-a0a9-68b3bfec4537"
 
 errors=0
@@ -25,17 +23,14 @@ check() {
 echo "=== Testing Kamal Workflows ==="
 echo ""
 
-echo "[dev] deploy-keycloak-kamal-dev.yml"
-check "dev workflow exists" test -f "$DEV_WORKFLOW"
-check "dev uses kamal-deploy@v5" grep -q 'Avocado-Technology/avcd-actions/kamal-deploy@v5' "$DEV_WORKFLOW"
-check "dev id-token write" grep -q 'id-token: write' "$DEV_WORKFLOW"
-check "dev OIDC infisical login" grep -q 'infisical login --method=oidc-auth' "$DEV_WORKFLOW"
-check "dev exports /keycloak" grep -q '/keycloak' "$DEV_WORKFLOW"
-check "dev workflow_dispatch kamal_command" grep -q 'kamal_command:' "$DEV_WORKFLOW"
+echo "[repo] no second Keycloak deploy workflow"
+check "deploy-keycloak-kamal-dev.yml removed" test ! -f "$REPO_DIR/.github/workflows/deploy-keycloak-kamal-dev.yml"
 
 echo ""
-echo "[prod] deploy-keycloak-kamal-prod.yml"
+echo "[prod] deploy-keycloak-kamal-prod.yml (infra — shared IdP)"
 check "prod workflow exists" test -f "$PROD_WORKFLOW"
+check "prod documents shared IdP URL" grep -q 'auth.avcd.ai' "$PROD_WORKFLOW" && grep -q 'dev and prod' "$PROD_WORKFLOW"
+check "prod documents Infisical parity" grep -q 'Infisical' "$PROD_WORKFLOW"
 check "prod uses production GitHub env for OIDC claim" grep -qE '^[[:space:]]*environment:[[:space:]]*production' "$PROD_WORKFLOW"
 check "prod OIDC audience is secrets.avcd.ai (pulumi keycloak-ci)" grep -q 'secrets.avcd.ai' "$PROD_WORKFLOW"
 check "prod uses pulumi keycloak-ci identity at repo level" grep -q 'INFISICAL_OIDC_IDENTITY_ID' "$PROD_WORKFLOW"
@@ -43,22 +38,18 @@ check "prod id-token write" grep -q 'id-token: write' "$PROD_WORKFLOW"
 check "prod OIDC infisical login" grep -q 'infisical login --method=oidc-auth' "$PROD_WORKFLOW"
 check "prod exports /keycloak" grep -q 'INFISICAL_SECRET_PATH.*/keycloak\|path=.*/keycloak\|/keycloak' "$PROD_WORKFLOW"
 check "prod exports /ci-bootstrap for SSH" grep -q '/ci-bootstrap' "$PROD_WORKFLOW"
+check "prod pins avcd-actions ref" grep -qE 'ref:[[:space:]]*2e0e1b5' "$PROD_WORKFLOW"
 check "prod uses internal avcd-actions checkout" grep -q 'Avocado-Technology/avcd-actions' "$PROD_WORKFLOW" && grep -q 'GH_INFRA_TOKEN' "$PROD_WORKFLOW"
 check "prod uses local kamal-deploy composite" grep -q './avcd-actions/kamal-deploy' "$PROD_WORKFLOW"
-check "prod project id db036f0e" grep -q "$PROJECT_ID" "$PROD_WORKFLOW"
 if grep -q "$LEGACY_PROJECT_ID" "$PROD_WORKFLOW" 2>/dev/null; then
   echo "  ✗ prod no legacy project id"
   ((errors++)) || true
 else
   echo "  ✓ prod no legacy project id"
 fi
-check "prod uses local registry via kamal (not skip_registry_login)" grep -q 'skip_registry_login: "false"' "$PROD_WORKFLOW"
-if grep -q 'verify_url:' "$PROD_WORKFLOW" 2>/dev/null; then
-  echo "  ✗ prod should not use verify_url (Kamal health is enough)"
-  ((errors++)) || true
-else
-  echo "  ✓ prod no CI HTTP verify"
-fi
+check "prod localhost registry input" grep -q 'localhost:5555' "$PROD_WORKFLOW"
+check "prod kamal push enabled" grep -q 'skip_registry_login: "false"' "$PROD_WORKFLOW"
+check "prod OIDC discovery verify_url" grep -q 'verify_url:' "$PROD_WORKFLOW" && grep -q 'openid-configuration' "$PROD_WORKFLOW"
 check "prod skip_accessory_boot" grep -q 'skip_accessory_boot' "$PROD_WORKFLOW"
 check "prod renders .kamal/secrets in Infisical step" grep -q 'secrets.ci.template' "$PROD_WORKFLOW"
 check "prod skip_secrets_render for kamal-deploy" grep -q 'skip_secrets_render' "$PROD_WORKFLOW"
@@ -68,6 +59,15 @@ if grep -q 'Preprocess deploy.yml' "$PROD_WORKFLOW" 2>/dev/null; then
 else
   echo "  ✓ prod no duplicate preprocess deploy.yml step"
 fi
+
+echo ""
+echo "[sync] sync-infisical-secrets.yml"
+SYNC_WORKFLOW="$REPO_DIR/.github/workflows/sync-infisical-secrets.yml"
+check "sync workflow exists" test -f "$SYNC_WORKFLOW"
+check "sync workflow_dispatch" grep -q 'workflow_dispatch:' "$SYNC_WORKFLOW"
+check "sync workflow_call" grep -q 'workflow_call:' "$SYNC_WORKFLOW"
+check "sync uses pulumi-secrets action" grep -q 'pulumi-secrets' "$SYNC_WORKFLOW"
+check "sync requires Infisical client secrets" grep -q 'INFISICAL_CLIENT_ID' "$SYNC_WORKFLOW"
 
 echo ""
 echo "[repo] legacy cleanup"
