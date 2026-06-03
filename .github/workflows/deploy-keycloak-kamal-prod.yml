@@ -172,7 +172,7 @@ jobs:
           infisical_oidc_audience: ${{ vars.INFISICAL_OIDC_AUDIENCE || 'https://secrets.avcd.ai' }}
           infisical_secrets_path: /keycloak
           secrets_template_path: .kamal/secrets.ci.template
-          kamal_version: ${{ vars.KAMAL_VERSION || '2.5.3' }}
+          kamal_version: ${{ vars.KAMAL_VERSION || '2.11.0' }}
           kamal_command: ${{ github.event_name == 'workflow_dispatch' && inputs.kamal_command || 'deploy' }}
           skip_registry_login: "false"
           skip_secrets_render: "true"
