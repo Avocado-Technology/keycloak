@@ -158,8 +158,17 @@ else
     ((errors++))
 fi
 
-# Test 14: deploy_timeout exceeds Docker health worst-case (240s)
-echo "[14/14] Checking deploy_timeout..."
+# Test 14: builder arch for pre-built quay image
+echo "[14/15] Checking builder arch..."
+if grep -q 'builder:' "$DEPLOY_YML" && grep -q 'arch: amd64' "$DEPLOY_YML"; then
+    echo "  ✓ builder arch amd64 configured"
+else
+    echo "  ✗ builder arch amd64 required for pre-built image"
+    ((errors++))
+fi
+
+# Test 15: deploy_timeout exceeds Docker health worst-case (240s)
+echo "[15/15] Checking deploy_timeout..."
 if grep -q 'deploy_timeout: 270' "$DEPLOY_YML"; then
     echo "  ✓ deploy_timeout is 270s (>= health start-period + retries)"
 else

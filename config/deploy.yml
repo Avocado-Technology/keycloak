@@ -47,6 +47,10 @@ registry:
   password:
     - REGISTRY_PASSWORD
 
+# Required for pre-built images: selects amd64 variant on the server (no local build).
+builder:
+  arch: amd64
+
 env:
   secret:
     - KC_DB_URL
