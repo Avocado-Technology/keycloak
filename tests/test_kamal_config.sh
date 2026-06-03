@@ -97,9 +97,9 @@ fi
 echo "[9/10] Checking secrets.ci.template..."
 if [ -f "$SECRETS_TEMPLATE" ]; then
     if grep -q 'KC_DB_URL' "$SECRETS_TEMPLATE" && \
-       grep -q 'infisical secrets get' "$SECRETS_TEMPLATE" && \
-       grep -q 'KEYCLOAK_ADMIN_PASSWORD' "$SECRETS_TEMPLATE"; then
-        echo "  ✓ secrets.ci.template uses infisical secrets get"
+       grep -q 'export_dotenv_file' "$SECRETS_TEMPLATE" && \
+       grep -q 'python3' "$SECRETS_TEMPLATE"; then
+        echo "  ✓ secrets.ci.template uses bulk export + python parse"
     else
         echo "  ✗ secrets.ci.template missing required exports"
         ((errors++))
@@ -169,10 +169,10 @@ fi
 
 # Test 15: deploy_timeout exceeds Docker health worst-case (240s)
 echo "[15/15] Checking deploy_timeout..."
-if grep -q 'deploy_timeout: 270' "$DEPLOY_YML"; then
-    echo "  ✓ deploy_timeout is 270s (>= health start-period + retries)"
+if grep -q 'deploy_timeout: 210' "$DEPLOY_YML"; then
+    echo "  ✓ deploy_timeout is 210s (aligned with Docker health budget)"
 else
-    echo "  ✗ deploy_timeout should be 270"
+    echo "  ✗ deploy_timeout should be 210"
     ((errors++))
 fi
 

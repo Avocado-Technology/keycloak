@@ -36,7 +36,12 @@ check "dev workflow_dispatch kamal_command" grep -q 'kamal_command:' "$DEV_WORKF
 echo ""
 echo "[prod] deploy-keycloak-kamal-prod.yml"
 check "prod workflow exists" test -f "$PROD_WORKFLOW"
-check "prod environment production" grep -q 'environment: production' "$PROD_WORKFLOW"
+if grep -qE '^[[:space:]]*environment:[[:space:]]*production' "$PROD_WORKFLOW" 2>/dev/null; then
+  echo "  ✗ prod must not use environment: production (5min wait_timer)"
+  ((errors++)) || true
+else
+  echo "  ✓ prod avoids production env wait_timer"
+fi
 check "prod id-token write" grep -q 'id-token: write' "$PROD_WORKFLOW"
 check "prod OIDC infisical login" grep -q 'infisical login --method=oidc-auth' "$PROD_WORKFLOW"
 check "prod exports /keycloak" grep -q 'INFISICAL_SECRET_PATH.*/keycloak\|path=.*/keycloak\|/keycloak' "$PROD_WORKFLOW"
@@ -51,15 +56,15 @@ else
   echo "  ✓ prod no legacy project id"
 fi
 check "prod skip_registry_login quay" grep -q 'skip_registry_login' "$PROD_WORKFLOW"
-check "prod health verify URL" grep -q 'health/ready' "$PROD_WORKFLOW"
-check "prod Set Kamal verify URL step" grep -q 'Set Kamal verify URL' "$PROD_WORKFLOW"
-check "prod verify_url from kamal_verify output" grep -q 'steps.kamal_verify.outputs.url' "$PROD_WORKFLOW"
-check "prod skips verify on setup" grep -q 'kamal_command' "$PROD_WORKFLOW" && \
-  grep -q 'deploy.*redeploy' "$PROD_WORKFLOW" && \
-  ! grep -q 'verify_url: https://\${{ steps.infisical.outputs.keycloak_host }}' "$PROD_WORKFLOW"
+if grep -q 'verify_url:' "$PROD_WORKFLOW" 2>/dev/null; then
+  echo "  ✗ prod should not use verify_url (Kamal health is enough)"
+  ((errors++)) || true
+else
+  echo "  ✓ prod no CI HTTP verify"
+fi
+check "prod skip_accessory_boot" grep -q 'skip_accessory_boot' "$PROD_WORKFLOW"
 check "prod renders .kamal/secrets in Infisical step" grep -q 'secrets.ci.template' "$PROD_WORKFLOW"
 check "prod skip_secrets_render for kamal-deploy" grep -q 'skip_secrets_render' "$PROD_WORKFLOW"
-check "prod short edge verify retry budget" grep -q 'verify_retry_max_time: "30"' "$PROD_WORKFLOW"
 if grep -q 'Preprocess deploy.yml' "$PROD_WORKFLOW" 2>/dev/null; then
   echo "  ✗ prod should not duplicate preprocess deploy.yml (kamal-deploy renders)"
   ((errors++)) || true

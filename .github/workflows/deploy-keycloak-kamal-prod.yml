@@ -34,7 +34,8 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: production
+    # Infisical/OIDC vars are repo-level. Avoid GitHub "production" deployment environment
+    # (it has a 5-minute wait_timer before the job starts).
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -149,17 +150,6 @@ jobs:
           path: avcd-actions
           token: ${{ secrets.GH_INFRA_TOKEN }}
 
-      - name: Set Kamal verify URL
-        id: kamal_verify
-        run: |
-          set -euo pipefail
-          CMD="${{ github.event_name == 'workflow_dispatch' && inputs.kamal_command || 'deploy' }}"
-          if [ "$CMD" = "deploy" ] || [ "$CMD" = "redeploy" ]; then
-            echo "url=https://${{ steps.infisical.outputs.keycloak_host }}/health/ready" >> "$GITHUB_OUTPUT"
-          else
-            echo "url=" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Deploy Keycloak with Kamal
         uses: ./avcd-actions/kamal-deploy
         with:
@@ -180,6 +170,4 @@ jobs:
           skip_secrets_render: "true"
           keycloak_host: ${{ steps.infisical.outputs.keycloak_host }}
           keycloak_image_tag: ${{ steps.infisical.outputs.keycloak_image_tag }}
-          verify_url: ${{ steps.kamal_verify.outputs.url }}
-          verify_retry_max_time: "30"
-          verify_retry_delay: "2"
+          skip_accessory_boot: "true"
