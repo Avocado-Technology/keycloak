@@ -36,6 +36,11 @@ on:
         required: false
         default: false
         type: boolean
+      apply_keycloak_config:
+        description: Run pulumi-infra keycloak-config (realm avcd) after deploy
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: deploy-keycloak-kamal-do-prod
@@ -193,7 +198,16 @@ jobs:
           skip_secrets_render: "true"
           keycloak_host: ${{ steps.infisical.outputs.keycloak_host }}
           skip_accessory_boot: "true"
-          # Edge smoke: master realm always exists after Kamal deploy. avcd realm is provisioned
-          # separately (terraform-keycloak / realm import), not by this workflow.
+          # Edge smoke: master realm exists after Kamal. avcd realm verified by pulumi-keycloak-config when apply_keycloak_config=true.
           verify_url: https://${{ steps.infisical.outputs.keycloak_host }}/realms/master/.well-known/openid-configuration
           verify_body_substring: https://${{ steps.infisical.outputs.keycloak_host }}/realms/master
+
+  apply-keycloak-config:
+    needs: deploy
+    if: >-
+      always() && needs.deploy.result == 'success' &&
+      github.event_name == 'workflow_dispatch' && inputs.apply_keycloak_config == true
+    uses: Avocado-Technology/pulumi-infra/.github/workflows/pulumi-keycloak-config.yml@main
+    with:
+      command: up
+    secrets: inherit
