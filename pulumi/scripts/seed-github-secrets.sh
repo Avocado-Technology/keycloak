@@ -11,7 +11,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO="${GITHUB_REPO:-Avocado-Technology/keycloak}"
 PULUMI_INFRA_ENV="${PULUMI_INFRA_ENV:-${ROOT}/../../pulumi-infra/.env}"
-INFISICAL_ENV_FILE="${INFISICAL_ENV_FILE:-${ROOT}/../../infiscal/.env}"
+INFISICAL_ENV_FILE="${INFISICAL_ENV_FILE:-${ROOT}/../../infisical/.env}"
 
 for f in "${PULUMI_INFRA_ENV}" "${INFISICAL_ENV_FILE}"; do
   if [ -f "${f}" ]; then
