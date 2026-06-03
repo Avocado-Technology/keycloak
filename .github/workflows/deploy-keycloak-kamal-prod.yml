@@ -50,14 +50,15 @@ jobs:
         id: infisical
         env:
           INFISICAL_API_URL: ${{ vars.INFISICAL_API_URL || 'https://secrets.avcd.ai/api' }}
-          INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_INFRA_PROJECT_ID || 'db036f0e-7452-4e17-9573-e5471b45d65f' }}
+          INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_INFRA_PROJECT_ID }}
           INFISICAL_SECRET_PATH: ${{ vars.INFISICAL_SECRET_PATH || '/keycloak' }}
           INFISICAL_ENV: ${{ vars.INFISICAL_ENV || 'prod' }}
           INFISICAL_OIDC_IDENTITY_ID: ${{ vars.INFISICAL_OIDC_IDENTITY_ID }}
           INFISICAL_OIDC_AUDIENCE: ${{ vars.INFISICAL_OIDC_AUDIENCE || 'https://secrets.avcd.ai' }}
         run: |
           set -euo pipefail
-          [ -n "${INFISICAL_OIDC_IDENTITY_ID:-}" ] || { echo "::error::Set INFISICAL_OIDC_IDENTITY_ID on production environment"; exit 1; }
+          [ -n "${INFISICAL_OIDC_IDENTITY_ID:-}" ] || { echo "::error::Set INFISICAL_OIDC_IDENTITY_ID repo variable (or production environment)"; exit 1; }
+          [ -n "${INFISICAL_PROJECT_ID:-}" ] || { echo "::error::Set INFISICAL_INFRA_PROJECT_ID repo variable"; exit 1; }
 
           OIDC_JWT=$(curl -sS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${INFISICAL_OIDC_AUDIENCE}" | jq -r .value)
