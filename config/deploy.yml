@@ -4,7 +4,7 @@
 # Docker health: Keycloak bash TCP probe on management port 9000 (see keycloak.org/observability/health).
 
 service: avcd-keycloak
-image: quay.io/keycloak/keycloak:__KEYCLOAK_IMAGE_TAG__
+image: avcd/keycloak
 
 # Kamal waits on Docker health; cold boot worst-case ~ start-period + retries×interval
 deploy_timeout: 210
@@ -38,8 +38,10 @@ servers:
       traefik.http.routers.avcd-keycloak.service: avcd-keycloak
       traefik.http.services.avcd-keycloak.loadbalancer.server.port: "8080"
 
-# No registry block: official quay.io/keycloak image is public; remote docker login
-# with DOCR credentials was failing (Quay rate limit). CI uses --skip-push.
+# Local registry: Kamal skips remote docker login (see Kamal::Configuration::Registry#local?).
+# CI runs kamal registry setup, builds from Dockerfile, pushes via SSH tunnel to the droplet.
+registry:
+  server: localhost:5555
 
 # Required for pre-built images: selects amd64 variant on the server (no local build).
 builder:

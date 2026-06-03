@@ -52,7 +52,7 @@ if grep -q "$LEGACY_PROJECT_ID" "$PROD_WORKFLOW" 2>/dev/null; then
 else
   echo "  ✓ prod no legacy project id"
 fi
-check "prod skip_registry_login quay" grep -q 'skip_registry_login' "$PROD_WORKFLOW"
+check "prod uses local registry via kamal (not skip_registry_login)" grep -q 'skip_registry_login: "false"' "$PROD_WORKFLOW"
 if grep -q 'verify_url:' "$PROD_WORKFLOW" 2>/dev/null; then
   echo "  ✗ prod should not use verify_url (Kamal health is enough)"
   ((errors++)) || true

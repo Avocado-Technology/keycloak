@@ -174,7 +174,7 @@ jobs:
           secrets_template_path: .kamal/secrets.ci.template
           kamal_version: ${{ vars.KAMAL_VERSION || '2.5.3' }}
           kamal_command: ${{ github.event_name == 'workflow_dispatch' && inputs.kamal_command || 'deploy' }}
-          skip_registry_login: "true"
+          skip_registry_login: "false"
           skip_secrets_render: "true"
           keycloak_host: ${{ steps.infisical.outputs.keycloak_host }}
           keycloak_image_tag: ${{ steps.infisical.outputs.keycloak_image_tag }}
