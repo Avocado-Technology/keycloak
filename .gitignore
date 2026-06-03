@@ -9,3 +9,7 @@ data/
 
 # Kamal secrets (generated at deploy time, should never be committed)
 .kamal/secrets
+
+# Pulumi (avcd-keycloak/secrets)
+pulumi/node_modules/
+pulumi/bin/

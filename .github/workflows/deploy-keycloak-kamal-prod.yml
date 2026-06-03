@@ -28,6 +28,11 @@ on:
           - deploy
           - setup
           - redeploy
+      sync_infisical_first:
+        description: Run sync-infisical-secrets (pulumi up) before deploy
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: deploy-keycloak-kamal-do-prod
@@ -38,7 +43,16 @@ permissions:
   id-token: write
 
 jobs:
+  sync-infisical:
+    if: github.event_name == 'workflow_dispatch' && inputs.sync_infisical_first == true
+    uses: ./.github/workflows/sync-infisical-secrets.yml
+    with:
+      pulumi_command: up
+    secrets: inherit
+
   deploy:
+    needs: [sync-infisical]
+    if: always() && (needs.sync-infisical.result == 'success' || needs.sync-infisical.result == 'skipped')
     runs-on: ubuntu-latest
     # OIDC identity 713f4078 (pulumi keycloak-ci) is bound to environment:production.
     # Remove the 5-minute wait_timer in GitHub → Settings → Environments → production.

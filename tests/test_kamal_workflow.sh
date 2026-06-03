@@ -70,6 +70,15 @@ else
 fi
 
 echo ""
+echo "[sync] sync-infisical-secrets.yml"
+SYNC_WORKFLOW="$REPO_DIR/.github/workflows/sync-infisical-secrets.yml"
+check "sync workflow exists" test -f "$SYNC_WORKFLOW"
+check "sync workflow_dispatch" grep -q 'workflow_dispatch:' "$SYNC_WORKFLOW"
+check "sync workflow_call" grep -q 'workflow_call:' "$SYNC_WORKFLOW"
+check "sync uses pulumi-secrets action" grep -q 'pulumi-secrets' "$SYNC_WORKFLOW"
+check "sync requires Infisical client secrets" grep -q 'INFISICAL_CLIENT_ID' "$SYNC_WORKFLOW"
+
+echo ""
 echo "[repo] legacy cleanup"
 check "legacy deploy-keycloak-dev.yml removed" test ! -f "$REPO_DIR/.github/workflows/deploy-keycloak-dev.yml"
 check "legacy deploy/production removed" test ! -d "$REPO_DIR/deploy/production"

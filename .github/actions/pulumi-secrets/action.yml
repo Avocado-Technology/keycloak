@@ -1,0 +1,53 @@
+name: Pulumi secrets stack
+description: Preview/up/refresh avcd-keycloak secrets stack (Infisical /keycloak)
+
+inputs:
+  command:
+    description: pulumi command (preview, up, refresh)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Require repository secrets
+      shell: bash
+      working-directory: pulumi
+      run: bash scripts/ci-require-secrets.sh
+      env:
+        SPACES_ACCESS_KEY_ID: ${{ env.SPACES_ACCESS_KEY_ID }}
+        SPACES_SECRET_ACCESS_KEY: ${{ env.SPACES_SECRET_ACCESS_KEY }}
+        PULUMI_CONFIG_PASSPHRASE: ${{ env.PULUMI_CONFIG_PASSPHRASE }}
+        INFISICAL_CLIENT_ID: ${{ env.INFISICAL_CLIENT_ID }}
+        INFISICAL_CLIENT_SECRET: ${{ env.INFISICAL_CLIENT_SECRET }}
+
+    - uses: pulumi/setup-pulumi@v2
+      with:
+        pulumi-version: "3.150.0"
+
+    - name: Login to Spaces backend
+      shell: bash
+      working-directory: pulumi
+      run: pulumi login "${PULUMI_BACKEND_URL}"
+      env:
+        AWS_ACCESS_KEY_ID: ${{ env.SPACES_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ env.SPACES_SECRET_ACCESS_KEY }}
+        AWS_EC2_METADATA_DISABLED: true
+        PULUMI_CONFIG_PASSPHRASE: ${{ env.PULUMI_CONFIG_PASSPHRASE }}
+
+    - uses: pulumi/actions@v5
+      with:
+        command: ${{ inputs.command }}
+        stack-name: secrets
+        work-dir: pulumi
+        cloud-url: ${{ env.PULUMI_BACKEND_URL }}
+        upsert: true
+        pulumi-args: ${{ inputs.command == 'up' && '--yes' || '' }}
+        comment-on-pr: false
+      env:
+        AWS_ACCESS_KEY_ID: ${{ env.SPACES_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ env.SPACES_SECRET_ACCESS_KEY }}
+        AWS_EC2_METADATA_DISABLED: true
+        PULUMI_CONFIG_PASSPHRASE: ${{ env.PULUMI_CONFIG_PASSPHRASE }}
+        PULUMI_ORG: ${{ env.PULUMI_ORG }}
+        INFISICAL_CLIENT_ID: ${{ env.INFISICAL_CLIENT_ID }}
+        INFISICAL_CLIENT_SECRET: ${{ env.INFISICAL_CLIENT_SECRET }}

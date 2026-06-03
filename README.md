@@ -67,16 +67,37 @@ To capture Admin UI changes back to git:
 
 ## Production deployment (Kamal)
 
-Bootstrap order is documented in [`pulumi-infra/README.md`](../pulumi-infra/README.md) (Keycloak bootstrap section).
+### Bootstrap order
+
+1. **pulumi-infra** — `pulumi up --stack infra` (Keycloak DB, DNS `auth.avcd.ai`, stack outputs). See [`pulumi-infra/README.md`](../pulumi-infra/README.md).
+2. **This repo** — sync Infisical `/keycloak` (reads infra outputs via Pulumi stack reference).
+3. **This repo** — Kamal deploy (OIDC read from Infisical).
 
 ```bash
-# After pulumi-infra stacks and Infisical /keycloak are populated:
-gh workflow run deploy-keycloak-kamal-prod.yml -R Avocado-Technology/keycloak -f kamal_command=setup
+# One-time: GitHub secrets for Pulumi sync on keycloak repo
+cd pulumi && bash scripts/seed-github-secrets.sh
+
+# After infra is up: populate /keycloak (first time or after credential rotation)
+gh workflow run sync-infisical-secrets.yml -R Avocado-Technology/keycloak -f pulumi_command=up
+
+# Verify catalog
+bash tests/e2e/verify-infisical-keycloak.sh
+
+# Deploy (optional: sync + deploy in one dispatch)
+gh workflow run deploy-keycloak-kamal-prod.yml -R Avocado-Technology/keycloak \
+  -f kamal_command=setup -f sync_infisical_first=true
 gh workflow run deploy-keycloak-kamal-prod.yml -R Avocado-Technology/keycloak -f kamal_command=deploy
+
 bash ../pulumi-infra/tests/e2e/verify-keycloak-deploy.sh
 ```
 
-GitHub **variables** on `production`: `INFISICAL_OIDC_IDENTITY_ID`, `INFISICAL_INFRA_PROJECT_ID`, `INFISICAL_API_URL`, `INFISICAL_SECRET_PATH=/keycloak`, `INFISICAL_OIDC_AUDIENCE`. SSH key comes from Infisical `/ci-bootstrap` (`DO_DEPLOY_SSH_KEY`), not GitHub Secrets.
+Pulumi project lives in [`pulumi/`](pulumi/). State migration from `pulumi-infra/keycloak-secrets`: [`pulumi/docs/STATE_MIGRATION.md`](pulumi/docs/STATE_MIGRATION.md).
+
+**GitHub secrets** (sync workflow): `SPACES_ACCESS_KEY_ID`, `SPACES_SECRET_ACCESS_KEY`, `PULUMI_CONFIG_PASSPHRASE`, `INFISICAL_CLIENT_ID`, `INFISICAL_CLIENT_SECRET`.
+
+**GitHub variables** on `production` (deploy OIDC): `INFISICAL_OIDC_IDENTITY_ID`, `INFISICAL_INFRA_PROJECT_ID`, `INFISICAL_API_URL`, `INFISICAL_SECRET_PATH=/keycloak`, `INFISICAL_OIDC_AUDIENCE`. SSH key comes from Infisical `/ci-bootstrap` (`DO_DEPLOY_SSH_KEY`), not GitHub Secrets.
+
+Optional Google IdP secrets: `bash scripts/sync-local-secrets-to-infisical.sh` with `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` set.
 
 `deploy-keycloak-kamal-dev.yml` is **workflow_dispatch only** (legacy dev host disabled).
 
