@@ -193,5 +193,7 @@ jobs:
           skip_secrets_render: "true"
           keycloak_host: ${{ steps.infisical.outputs.keycloak_host }}
           skip_accessory_boot: "true"
-          verify_url: https://${{ steps.infisical.outputs.keycloak_host }}/realms/avcd/.well-known/openid-configuration
-          verify_body_substring: https://${{ steps.infisical.outputs.keycloak_host }}/realms/avcd
+          # Edge smoke: master realm always exists after Kamal deploy. avcd realm is provisioned
+          # separately (terraform-keycloak / realm import), not by this workflow.
+          verify_url: https://${{ steps.infisical.outputs.keycloak_host }}/realms/master/.well-known/openid-configuration
+          verify_body_substring: https://${{ steps.infisical.outputs.keycloak_host }}/realms/master
