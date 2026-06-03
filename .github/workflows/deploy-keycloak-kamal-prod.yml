@@ -40,6 +40,9 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # OIDC identity 713f4078 (pulumi keycloak-ci) is bound to environment:production.
+    # Remove the 5-minute wait_timer in GitHub → Settings → Environments → production.
+    environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v4

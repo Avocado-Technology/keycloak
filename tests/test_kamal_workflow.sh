@@ -36,12 +36,7 @@ check "dev workflow_dispatch kamal_command" grep -q 'kamal_command:' "$DEV_WORKF
 echo ""
 echo "[prod] deploy-keycloak-kamal-prod.yml"
 check "prod workflow exists" test -f "$PROD_WORKFLOW"
-if grep -qE '^[[:space:]]*environment:[[:space:]]*production' "$PROD_WORKFLOW" 2>/dev/null; then
-  echo "  ✗ prod must not use environment: production (5min wait_timer + wrong OIDC claim)"
-  ((errors++)) || true
-else
-  echo "  ✓ prod avoids GitHub production environment"
-fi
+check "prod uses production GitHub env for OIDC claim" grep -qE '^[[:space:]]*environment:[[:space:]]*production' "$PROD_WORKFLOW"
 check "prod OIDC audience is secrets.avcd.ai (pulumi keycloak-ci)" grep -q 'secrets.avcd.ai' "$PROD_WORKFLOW"
 check "prod uses pulumi keycloak-ci identity at repo level" grep -q 'INFISICAL_OIDC_IDENTITY_ID' "$PROD_WORKFLOW"
 check "prod id-token write" grep -q 'id-token: write' "$PROD_WORKFLOW"
