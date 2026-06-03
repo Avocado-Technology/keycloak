@@ -207,7 +207,15 @@ jobs:
     if: >-
       always() && needs.deploy.result == 'success' &&
       github.event_name == 'workflow_dispatch' && inputs.apply_keycloak_config == true
-    uses: Avocado-Technology/pulumi-infra/.github/workflows/pulumi-keycloak-config.yml@main
-    with:
-      command: up
-    secrets: inherit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger pulumi-infra keycloak-config (private repo)
+        env:
+          GH_TOKEN: ${{ secrets.GH_INFRA_TOKEN }}
+        run: |
+          set -euo pipefail
+          [ -n "${GH_TOKEN:-}" ] || { echo "::error::GH_INFRA_TOKEN required to trigger pulumi-infra workflow"; exit 1; }
+          gh workflow run pulumi-keycloak-config.yml \
+            --repo Avocado-Technology/pulumi-infra \
+            -f command=up
+          echo "✓ Started pulumi-keycloak-config in pulumi-infra (watch Actions there for avcd realm apply)"
