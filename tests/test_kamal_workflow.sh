@@ -42,8 +42,8 @@ if grep -qE '^[[:space:]]*environment:[[:space:]]*production' "$PROD_WORKFLOW" 2
 else
   echo "  ✓ prod avoids GitHub production environment"
 fi
-check "prod uses development env for OIDC (keycloak_dev)" grep -qE '^[[:space:]]*environment:[[:space:]]*development' "$PROD_WORKFLOW"
-check "prod OIDC audience is GitHub org URL" grep -q 'github.com/Avocado-Technology' "$PROD_WORKFLOW"
+check "prod OIDC audience is secrets.avcd.ai (pulumi keycloak-ci)" grep -q 'secrets.avcd.ai' "$PROD_WORKFLOW"
+check "prod uses pulumi keycloak-ci identity at repo level" grep -q 'INFISICAL_OIDC_IDENTITY_ID' "$PROD_WORKFLOW"
 check "prod id-token write" grep -q 'id-token: write' "$PROD_WORKFLOW"
 check "prod OIDC infisical login" grep -q 'infisical login --method=oidc-auth' "$PROD_WORKFLOW"
 check "prod exports /keycloak" grep -q 'INFISICAL_SECRET_PATH.*/keycloak\|path=.*/keycloak\|/keycloak' "$PROD_WORKFLOW"

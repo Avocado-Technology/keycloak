@@ -4,9 +4,9 @@
 # (/keycloak, /ci-bootstrap). There is no separate dev Infisical host.
 # INFISICAL_ENV is the Infisical environment slug inside that project (e.g. prod).
 #
-# OIDC: Terraform registers keycloak_dev with GitHub deployment environment
-# "development" (not a second Infisical). Avoid GitHub "production" environment — it
-# has a 5-minute wait_timer and a different OIDC identity binding.
+# OIDC: Pulumi keycloak-ci on secrets.avcd.ai (repo:Avocado-Technology/keycloak:*).
+# Do not use GitHub environment "production" (5-minute wait_timer). Do not use the
+# legacy Terraform keycloak_dev identity on the development GitHub environment.
 
 name: Deploy Keycloak to DigitalOcean (prod) — Kamal
 
@@ -40,8 +40,6 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # GitHub "development" matches Infisical OIDC bound_claims (keycloak_dev in infra).
-    environment: development
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,7 +58,7 @@ jobs:
           INFISICAL_SECRET_PATH: ${{ vars.INFISICAL_SECRET_PATH || '/keycloak' }}
           INFISICAL_ENV: ${{ vars.INFISICAL_ENV || 'prod' }}
           INFISICAL_OIDC_IDENTITY_ID: ${{ vars.INFISICAL_OIDC_IDENTITY_ID }}
-          INFISICAL_OIDC_AUDIENCE: ${{ vars.INFISICAL_OIDC_AUDIENCE || 'https://github.com/Avocado-Technology' }}
+          INFISICAL_OIDC_AUDIENCE: ${{ vars.INFISICAL_OIDC_AUDIENCE || 'https://secrets.avcd.ai' }}
         run: |
           set -euo pipefail
           [ -n "${INFISICAL_OIDC_IDENTITY_ID:-}" ] || { echo "::error::Set INFISICAL_OIDC_IDENTITY_ID repo variable (or production environment)"; exit 1; }
@@ -168,7 +166,7 @@ jobs:
           infisical_project_id: ${{ vars.INFISICAL_INFRA_PROJECT_ID || 'db036f0e-7452-4e17-9573-e5471b45d65f' }}
           infisical_infra_project_id: ${{ vars.INFISICAL_INFRA_PROJECT_ID || 'db036f0e-7452-4e17-9573-e5471b45d65f' }}
           infisical_oidc_identity_id: ${{ vars.INFISICAL_OIDC_IDENTITY_ID }}
-          infisical_oidc_audience: ${{ vars.INFISICAL_OIDC_AUDIENCE || 'https://github.com/Avocado-Technology' }}
+          infisical_oidc_audience: ${{ vars.INFISICAL_OIDC_AUDIENCE || 'https://secrets.avcd.ai' }}
           infisical_secrets_path: /keycloak
           secrets_template_path: .kamal/secrets.ci.template
           kamal_version: ${{ vars.KAMAL_VERSION || '2.5.3' }}
