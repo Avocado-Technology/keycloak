@@ -166,11 +166,12 @@ jobs:
           echo "✓ Postgres schema permissions ensured"
 
       # Pin avcd-actions (2e0e1b5+ has localhost registry + Kamal 2.11; v5.4.5 lacks registry setup).
+      # Use full commit SHA — short refs are fetched as branch names and fail.
       - name: Checkout avcd-actions
         uses: actions/checkout@v4
         with:
           repository: Avocado-Technology/avcd-actions
-          ref: 2e0e1b5
+          ref: 2e0e1b537f6f82ab5b3dc3195884348a800d4ca8
           path: avcd-actions
           token: ${{ secrets.GH_INFRA_TOKEN }}
 
