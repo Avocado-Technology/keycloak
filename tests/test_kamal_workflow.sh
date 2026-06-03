@@ -57,7 +57,15 @@ check "prod verify_url from kamal_verify output" grep -q 'steps.kamal_verify.out
 check "prod skips verify on setup" grep -q 'kamal_command' "$PROD_WORKFLOW" && \
   grep -q 'deploy.*redeploy' "$PROD_WORKFLOW" && \
   ! grep -q 'verify_url: https://\${{ steps.infisical.outputs.keycloak_host }}' "$PROD_WORKFLOW"
-check "prod preprocess deploy.yml placeholders" grep -q '__KEYCLOAK_HOST__' "$PROD_WORKFLOW"
+check "prod renders .kamal/secrets in Infisical step" grep -q 'secrets.ci.template' "$PROD_WORKFLOW"
+check "prod skip_secrets_render for kamal-deploy" grep -q 'skip_secrets_render' "$PROD_WORKFLOW"
+check "prod short edge verify retry budget" grep -q 'verify_retry_max_time: "30"' "$PROD_WORKFLOW"
+if grep -q 'Preprocess deploy.yml' "$PROD_WORKFLOW" 2>/dev/null; then
+  echo "  ✗ prod should not duplicate preprocess deploy.yml (kamal-deploy renders)"
+  ((errors++)) || true
+else
+  echo "  ✓ prod no duplicate preprocess deploy.yml step"
+fi
 
 echo ""
 echo "[repo] legacy cleanup"

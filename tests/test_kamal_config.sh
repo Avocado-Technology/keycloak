@@ -97,10 +97,9 @@ fi
 echo "[9/10] Checking secrets.ci.template..."
 if [ -f "$SECRETS_TEMPLATE" ]; then
     if grep -q 'KC_DB_URL' "$SECRETS_TEMPLATE" && \
-       grep -q 'KC_DB_USERNAME' "$SECRETS_TEMPLATE" && \
-       grep -q 'KC_DB_PASSWORD' "$SECRETS_TEMPLATE" && \
+       grep -q 'infisical secrets get' "$SECRETS_TEMPLATE" && \
        grep -q 'KEYCLOAK_ADMIN_PASSWORD' "$SECRETS_TEMPLATE"; then
-        echo "  ✓ secrets.ci.template has required exports"
+        echo "  ✓ secrets.ci.template uses infisical secrets get"
     else
         echo "  ✗ secrets.ci.template missing required exports"
         ((errors++))
@@ -159,12 +158,12 @@ else
     ((errors++))
 fi
 
-# Test 14: deploy_timeout allows Keycloak startup
+# Test 14: deploy_timeout exceeds Docker health worst-case (240s)
 echo "[14/14] Checking deploy_timeout..."
-if grep -q 'deploy_timeout: 180' "$DEPLOY_YML"; then
-    echo "  ✓ deploy_timeout is 180s"
+if grep -q 'deploy_timeout: 270' "$DEPLOY_YML"; then
+    echo "  ✓ deploy_timeout is 270s (>= health start-period + retries)"
 else
-    echo "  ✗ deploy_timeout should be 180"
+    echo "  ✗ deploy_timeout should be 270"
     ((errors++))
 fi
 

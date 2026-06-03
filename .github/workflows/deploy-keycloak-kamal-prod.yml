@@ -69,6 +69,7 @@ jobs:
             --machine-identity-id="$INFISICAL_OIDC_IDENTITY_ID" \
             --oidc-jwt="$OIDC_JWT" \
             --domain="${INFISICAL_API_URL%/api}" --silent --plain)
+          echo "::add-mask::${INFISICAL_TOKEN}"
 
           DOMAIN="${INFISICAL_API_URL%/api}"
           infisical export --env="${INFISICAL_ENV}" --path="${INFISICAL_SECRET_PATH}" \
@@ -106,6 +107,14 @@ jobs:
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 
+          install -d -m 700 .kamal
+          export INFISICAL_INFRA_PROJECT_ID="$INFISICAL_PROJECT_ID"
+          export INFISICAL_SECRETS_PATH="${INFISICAL_SECRET_PATH}"
+          export INFISICAL_BOOTSTRAP_PATH="/ci-bootstrap"
+          bash .kamal/secrets.ci.template > .kamal/secrets
+          chmod 600 .kamal/secrets
+          test -s .kamal/secrets
+
       - name: Ensure Postgres schema permissions (idempotent)
         if: steps.infisical.outputs.postgres_bootstrap_uri != ''
         env:
@@ -130,18 +139,6 @@ jobs:
           SQL
           REMOTE
           echo "✓ Postgres schema permissions ensured"
-
-      - name: Preprocess deploy.yml
-        run: |
-          set -euo pipefail
-          HOST="${{ steps.infisical.outputs.keycloak_host }}"
-          TAG="${{ steps.infisical.outputs.keycloak_image_tag }}"
-          DEPLOY="${{ steps.infisical.outputs.deploy_host }}"
-          USER="${{ steps.infisical.outputs.deploy_user }}"
-          sed -i "s|__KEYCLOAK_HOST__|${HOST}|g" config/deploy.yml
-          sed -i "s|__KEYCLOAK_DEPLOY_HOST__|${DEPLOY}|g" config/deploy.yml
-          sed -i "s|__KEYCLOAK_IMAGE_TAG__|${TAG}|g" config/deploy.yml
-          sed -i "s|__DO_DEPLOY_USER__|${USER}|g" config/deploy.yml
 
       # Internal org repo — checkout locally (remote `uses: org/repo` fails on hosted runners).
       - name: Checkout avcd-actions
@@ -180,6 +177,9 @@ jobs:
           kamal_version: ${{ vars.KAMAL_VERSION || '2.5.3' }}
           kamal_command: ${{ github.event_name == 'workflow_dispatch' && inputs.kamal_command || 'deploy' }}
           skip_registry_login: "true"
+          skip_secrets_render: "true"
           keycloak_host: ${{ steps.infisical.outputs.keycloak_host }}
           keycloak_image_tag: ${{ steps.infisical.outputs.keycloak_image_tag }}
           verify_url: ${{ steps.kamal_verify.outputs.url }}
+          verify_retry_max_time: "30"
+          verify_retry_delay: "2"

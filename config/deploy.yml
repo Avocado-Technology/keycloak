@@ -6,7 +6,8 @@
 service: avcd-keycloak
 image: quay.io/keycloak/keycloak:__KEYCLOAK_IMAGE_TAG__
 
-deploy_timeout: 180
+# Must exceed Docker health worst-case: start-period 120s + (retries 8 × interval 15s) = 240s
+deploy_timeout: 270
 
 ssh:
   user: __DO_DEPLOY_USER__
