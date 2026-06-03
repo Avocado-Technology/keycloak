@@ -37,11 +37,13 @@ echo ""
 echo "[prod] deploy-keycloak-kamal-prod.yml"
 check "prod workflow exists" test -f "$PROD_WORKFLOW"
 if grep -qE '^[[:space:]]*environment:[[:space:]]*production' "$PROD_WORKFLOW" 2>/dev/null; then
-  echo "  ✗ prod must not use environment: production (5min wait_timer)"
+  echo "  ✗ prod must not use environment: production (5min wait_timer + wrong OIDC claim)"
   ((errors++)) || true
 else
-  echo "  ✓ prod avoids production env wait_timer"
+  echo "  ✓ prod avoids GitHub production environment"
 fi
+check "prod uses development env for OIDC (keycloak_dev)" grep -qE '^[[:space:]]*environment:[[:space:]]*development' "$PROD_WORKFLOW"
+check "prod OIDC audience is GitHub org URL" grep -q 'github.com/Avocado-Technology' "$PROD_WORKFLOW"
 check "prod id-token write" grep -q 'id-token: write' "$PROD_WORKFLOW"
 check "prod OIDC infisical login" grep -q 'infisical login --method=oidc-auth' "$PROD_WORKFLOW"
 check "prod exports /keycloak" grep -q 'INFISICAL_SECRET_PATH.*/keycloak\|path=.*/keycloak\|/keycloak' "$PROD_WORKFLOW"
