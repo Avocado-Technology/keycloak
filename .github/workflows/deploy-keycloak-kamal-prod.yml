@@ -1,14 +1,17 @@
-# Deploy Keycloak via Kamal — production host (auth.avcd.ai)
+# Deploy Keycloak via Kamal — single shared IdP on the infra stack (auth.avcd.ai)
 #
-# Secrets: single self-hosted Infisical (https://secrets.avcd.ai), avcd-infra project
-# (/keycloak, /ci-bootstrap). There is no separate dev Infisical host.
-# INFISICAL_ENV is the Infisical environment slug inside that project (e.g. prod).
+# Same model as Infisical: one deployment on infra; dev and prod apps consume it by URL
+# (https://auth.avcd.ai/realms/avcd). There is no second Keycloak host for "dev".
+# Local Docker (make up) is for developer machines only.
 #
-# OIDC: Pulumi keycloak-ci on secrets.avcd.ai (repo:Avocado-Technology/keycloak:*).
-# Do not use GitHub environment "production" (5-minute wait_timer). Do not use the
-# legacy Terraform keycloak_dev identity on the development GitHub environment.
+# Secrets: single Infisical (https://secrets.avcd.ai), avcd-infra project (/keycloak,
+# /ci-bootstrap). INFISICAL_ENV=prod is the Infisical slug for infra-host secrets, not
+# a separate Keycloak instance.
+#
+# OIDC: Pulumi keycloak-ci (repo:Avocado-Technology/keycloak:*). GitHub environment
+# "production" is for OIDC claim binding only — not an app deploy environment.
 
-name: Deploy Keycloak to DigitalOcean (prod) — Kamal
+name: Deploy Keycloak to DigitalOcean (infra) — Kamal
 
 on:
   push:
@@ -54,8 +57,8 @@ jobs:
     needs: [sync-infisical]
     if: always() && (needs.sync-infisical.result == 'success' || needs.sync-infisical.result == 'skipped')
     runs-on: ubuntu-latest
-    # OIDC identity 713f4078 (pulumi keycloak-ci) is bound to environment:production.
-    # Remove the 5-minute wait_timer in GitHub → Settings → Environments → production.
+    # GitHub environment "production" = OIDC claim binding for keycloak-ci only (not a second IdP).
+    # Ensure wait_timer is 0: Settings → Environments → production.
     environment: production
     steps:
       - name: Checkout
@@ -116,7 +119,6 @@ jobs:
 
           {
             echo "keycloak_host=${KEYCLOAK_HOST}"
-            echo "keycloak_image_tag=${KEYCLOAK_IMAGE_TAG:-26.0}"
             echo "deploy_host=${DO_DEPLOY_HOST}"
             echo "deploy_user=${DO_DEPLOY_USER:-deploy}"
             echo "postgres_bootstrap_uri=${KEYCLOAK_POSTGRES_BOOTSTRAP_URI:-}"
@@ -163,12 +165,12 @@ jobs:
           REMOTE
           echo "✓ Postgres schema permissions ensured"
 
-      # Internal org repo — checkout locally (remote `uses: org/repo` fails on hosted runners).
+      # Pin avcd-actions (2e0e1b5+ has localhost registry + Kamal 2.11; v5.4.5 lacks registry setup).
       - name: Checkout avcd-actions
         uses: actions/checkout@v4
         with:
           repository: Avocado-Technology/avcd-actions
-          ref: main
+          ref: 2e0e1b5
           path: avcd-actions
           token: ${{ secrets.GH_INFRA_TOKEN }}
 
@@ -178,18 +180,17 @@ jobs:
           deploy_host: ${{ steps.infisical.outputs.deploy_host }}
           deploy_user: ${{ steps.infisical.outputs.deploy_user }}
           ssh_key: ${{ steps.infisical.outputs.ssh_key }}
-          docr_registry_url: quay.io
+          # Unused for login when deploy.yml registry.server is localhost; required by composite input.
+          docr_registry_url: localhost:5555
           infisical_api_url: ${{ vars.INFISICAL_API_URL || 'https://secrets.avcd.ai/api' }}
-          infisical_project_id: ${{ vars.INFISICAL_INFRA_PROJECT_ID || 'db036f0e-7452-4e17-9573-e5471b45d65f' }}
-          infisical_infra_project_id: ${{ vars.INFISICAL_INFRA_PROJECT_ID || 'db036f0e-7452-4e17-9573-e5471b45d65f' }}
+          infisical_project_id: ${{ vars.INFISICAL_INFRA_PROJECT_ID }}
           infisical_oidc_identity_id: ${{ vars.INFISICAL_OIDC_IDENTITY_ID }}
-          infisical_oidc_audience: ${{ vars.INFISICAL_OIDC_AUDIENCE || 'https://secrets.avcd.ai' }}
-          infisical_secrets_path: /keycloak
-          secrets_template_path: .kamal/secrets.ci.template
           kamal_version: ${{ vars.KAMAL_VERSION || '2.11.0' }}
           kamal_command: ${{ github.event_name == 'workflow_dispatch' && inputs.kamal_command || 'deploy' }}
+          # false: Kamal must build/push to localhost:5555 (--skip-push only when true).
           skip_registry_login: "false"
           skip_secrets_render: "true"
           keycloak_host: ${{ steps.infisical.outputs.keycloak_host }}
-          keycloak_image_tag: ${{ steps.infisical.outputs.keycloak_image_tag }}
           skip_accessory_boot: "true"
+          verify_url: https://${{ steps.infisical.outputs.keycloak_host }}/realms/avcd/.well-known/openid-configuration
+          verify_body_substring: https://${{ steps.infisical.outputs.keycloak_host }}/realms/avcd

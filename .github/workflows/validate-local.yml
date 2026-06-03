@@ -29,6 +29,7 @@ jobs:
           chmod +x scripts/*.sh tests/*.sh
           ./tests/test_compose_config.sh
           ./tests/test_kamal_workflow.sh
+          ./tests/test_kamal_config.sh
 
       - name: Pulumi secrets unit tests
         run: |

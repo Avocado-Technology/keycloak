@@ -2,6 +2,17 @@
 
 Self-hosted [Keycloak](https://www.keycloak.org/) identity provider for the AVCD platform. Local-first Docker stack to validate OIDC/OAuth2 before integrating with web, API, and MCP services.
 
+## Shared identity platform (infra only)
+
+Same model as **Infisical**: one deployment on the **infra** stack; every application environment uses it **by URL**.
+
+| Platform | Deployed once on infra | Consumed by dev / prod |
+|----------|------------------------|-------------------------|
+| **Infisical** | `https://secrets.avcd.ai` | Each app’s Infisical project + OIDC at deploy time |
+| **Keycloak** | `https://auth.avcd.ai` | `KEYCLOAK_URL` / issuer `https://auth.avcd.ai/realms/avcd` |
+
+There is **no** separate Keycloak host for “dev” (no `auth.dev.avcd.ai` deploy). `make up` is local-only. Kamal deploy runs from `deploy-keycloak-kamal-prod.yml` (workflow name says “infra”; GitHub `production` environment is OIDC binding only).
+
 ## Quick start
 
 ```bash
@@ -46,7 +57,7 @@ AVCD realm OIDC discovery: http://localhost:8080/realms/avcd/.well-known/openid-
 
 Local realm settings are imported from `config/avcd-realm.json` on first boot (`--import-realm`).
 
-Production Keycloak runs at **`https://auth.avcd.ai`** via Kamal (`deploy-keycloak-kamal-prod.yml`), official image `quay.io/keycloak/keycloak`, secrets from Infisical **`/keycloak`** (prod). No `KC_*` GitHub secrets — OIDC variables only on the `production` environment.
+Shared Keycloak runs at **`https://auth.avcd.ai`** via Kamal (`deploy-keycloak-kamal-prod.yml`), official image `quay.io/keycloak/keycloak`, secrets from Infisical **`/keycloak`** in `avcd-infra` (Infisical env slug `prod` = infra host secrets, not a second IdP). No `KC_*` GitHub secrets — OIDC variables on the `production` GitHub environment for CI only.
 
 `config/avcd-realm.prod.json` is **deprecated** (reference only). Keep local JSON aligned with Terraform when adding clients for local dev.
 
@@ -63,7 +74,8 @@ To capture Admin UI changes back to git:
 | `api` | Add Keycloak JWKS validation (same RS256 pattern as Auth0) |
 | `web` | OIDC client pointing at `avcd-web` |
 | `mcp` | Public PKCE client `avcd-mcp` |
-| `traefik` | Route `auth.dev.avcd.ai` to Keycloak (via deploy compose labels) |
+| `api`, `web`, `mcp` | Set issuer/JWKS to `https://auth.avcd.ai/realms/avcd` (dev and prod deploys) |
+| `traefik` | `auth.avcd.ai` → Keycloak container on `avcd_edge` (Kamal labels in `config/deploy.yml`) |
 
 ## Production deployment (Kamal)
 
@@ -93,13 +105,20 @@ bash ../pulumi-infra/tests/e2e/verify-keycloak-deploy.sh
 
 Pulumi project lives in [`pulumi/`](pulumi/). State migration from `pulumi-infra/keycloak-secrets`: [`pulumi/docs/STATE_MIGRATION.md`](pulumi/docs/STATE_MIGRATION.md).
 
-**GitHub secrets** (sync workflow): `SPACES_ACCESS_KEY_ID`, `SPACES_SECRET_ACCESS_KEY`, `PULUMI_CONFIG_PASSPHRASE`, `INFISICAL_CLIENT_ID`, `INFISICAL_CLIENT_SECRET`.
+**GitHub secrets**
 
-**GitHub variables** on `production` (deploy OIDC): `INFISICAL_OIDC_IDENTITY_ID`, `INFISICAL_INFRA_PROJECT_ID`, `INFISICAL_API_URL`, `INFISICAL_SECRET_PATH=/keycloak`, `INFISICAL_OIDC_AUDIENCE`. SSH key comes from Infisical `/ci-bootstrap` (`DO_DEPLOY_SSH_KEY`), not GitHub Secrets.
+| Secret | Workflow | Purpose |
+|--------|----------|---------|
+| `SPACES_ACCESS_KEY_ID`, `SPACES_SECRET_ACCESS_KEY`, `PULUMI_CONFIG_PASSPHRASE`, `INFISICAL_CLIENT_ID`, `INFISICAL_CLIENT_SECRET` | `sync-infisical-secrets.yml` | Pulumi → Infisical `/keycloak` |
+| `GH_INFRA_TOKEN` | `deploy-keycloak-kamal-prod.yml` | Checkout private `Avocado-Technology/avcd-actions` (pinned commit `2e0e1b5`) |
+
+**GitHub variables** on `production` (deploy OIDC): `INFISICAL_OIDC_IDENTITY_ID`, `INFISICAL_INFRA_PROJECT_ID`, `INFISICAL_API_URL`, `INFISICAL_SECRET_PATH=/keycloak`, `INFISICAL_ENV=prod`, `INFISICAL_OIDC_AUDIENCE=https://secrets.avcd.ai`, optional `KAMAL_VERSION=2.11.0`. SSH and DB secrets come from Infisical (`/keycloak`, `/ci-bootstrap`), not GitHub Secrets.
+
+**Registry:** Kamal builds the wrapper `Dockerfile` and pushes to `localhost:5555` on the infra droplet (no DOCR login in CI). Post-deploy CI checks OIDC discovery at `https://<KEYCLOAK_HOST>/realms/avcd/.well-known/openid-configuration`.
 
 Optional Google IdP secrets: `bash scripts/sync-local-secrets-to-infisical.sh` with `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` set.
 
-`deploy-keycloak-kamal-dev.yml` is **workflow_dispatch only** (legacy dev host disabled).
+Post-deploy locally: `KEYCLOAK_HOST=auth.avcd.ai make e2e-deploy`
 
 ## Troubleshooting
 

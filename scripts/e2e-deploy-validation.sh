@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# HTTPS E2E validation after deploy to auth.dev.avcd.ai (OIDC discovery only).
+# HTTPS E2E validation after deploy to shared infra IdP (OIDC discovery only).
 set -euo pipefail
 
-KEYCLOAK_HOST="${KEYCLOAK_HOST:-auth.dev.avcd.ai}"
+KEYCLOAK_HOST="${KEYCLOAK_HOST:-auth.avcd.ai}"
 KEYCLOAK_URL="${KEYCLOAK_URL:-https://${KEYCLOAK_HOST}}"
 REALM="${KEYCLOAK_REALM:-avcd}"
 EXPECTED_ISS="${KEYCLOAK_URL}/realms/${REALM}"
