@@ -47,6 +47,70 @@
       ]
     },
     {
+      "name": "email",
+      "description": "OpenID Connect scope with email claim for Odoo user matching",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "profile",
+      "description": "OpenID Connect profile scope (aligned with AVCD web OIDC)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "profile",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "firstName",
+            "claim.name": "given_name",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "family_name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "lastName",
+            "claim.name": "family_name",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
       "name": "avcd-api-audience",
       "description": "Adds GraphQL API audience claim to access tokens",
       "protocol": "openid-connect",
@@ -192,6 +256,30 @@
         "openid",
         "avcd-mcp-audience"
       ]
+    },
+    {
+      "clientId": "avcd-odoo",
+      "name": "AVCD Odoo ERP",
+      "description": "Confidential OIDC client for Odoo SSO (Authorization Code Flow). Secret is local-dev only.",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "local-odoo-client-secret",
+      "redirectUris": [
+        "http://localhost:8069/auth_oauth/signin",
+        "https://odoo.dev.avcd.ai/auth_oauth/signin"
+      ],
+      "webOrigins": [
+        "http://localhost:8069",
+        "https://odoo.dev.avcd.ai"
+      ],
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "defaultClientScopes": ["openid", "email", "profile"]
     }
   ],
   "users": [
