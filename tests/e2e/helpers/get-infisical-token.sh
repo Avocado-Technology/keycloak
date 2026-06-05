@@ -10,10 +10,10 @@ if [[ -n "${INFISICAL_SERVICE_TOKEN:-}" ]]; then
 fi
 
 if [[ -n "${INFISICAL_CLIENT_ID:-}" && -n "${INFISICAL_CLIENT_SECRET:-}" ]]; then
-  curl -sS -X POST "${INFISICAL_HOST}/api/v1/auth/universal-auth/login" \
+  curl -sf -X POST "${INFISICAL_HOST}/api/v1/auth/universal-auth/login" \
     -H "Content-Type: application/json" \
     -d "{\"clientId\":\"${INFISICAL_CLIENT_ID}\",\"clientSecret\":\"${INFISICAL_CLIENT_SECRET}\"}" \
-    | jq -r '.accessToken // empty'
+    | jq -r '.accessToken // empty' | tr -d '\n\r' || true
   exit 0
 fi
 
