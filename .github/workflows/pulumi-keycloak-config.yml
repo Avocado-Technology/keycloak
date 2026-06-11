@@ -1,0 +1,100 @@
+# Apply realm avcd clients/scopes on auth.avcd.ai (incl. avcd-conta-azul-api M2M).
+name: Pulumi Keycloak Config
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: Pulumi command
+        required: false
+        default: up
+        type: choice
+        options:
+          - preview
+          - up
+          - refresh
+
+concurrency:
+  group: keycloak-pulumi-config
+  cancel-in-progress: true
+
+env:
+  PULUMI_BACKEND_URL: s3://avcd-infra-tfstate/pulumi?region=us-east-1&endpoint=sfo3.digitaloceanspaces.com
+  PULUMI_ORG: organization
+  INFISICAL_API_URL: https://secrets.avcd.ai/api
+  INFISICAL_ENV: prod
+  INFISICAL_SECRET_PATH: /keycloak
+  INFISICAL_INFRA_PROJECT_ID: db036f0e-7452-4e17-9573-e5471b45d65f
+
+permissions:
+  contents: read
+
+jobs:
+  keycloak-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache-dependency-path: pulumi/package-lock.json
+
+      - name: Install Pulumi dependencies
+        working-directory: pulumi
+        run: npm ci
+
+      - name: Require repository secrets
+        shell: bash
+        working-directory: pulumi
+        run: bash scripts/ci-require-secrets.sh
+        env:
+          SPACES_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY_ID }}
+          SPACES_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
+          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+
+      - uses: pulumi/setup-pulumi@v2
+        with:
+          pulumi-version: "3.150.0"
+
+      - name: Login to Spaces backend
+        shell: bash
+        working-directory: pulumi
+        run: pulumi login "${PULUMI_BACKEND_URL}"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
+          AWS_EC2_METADATA_DISABLED: true
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+
+      - name: Set keycloak-config stack secrets from Infisical
+        shell: bash
+        run: bash scripts/set-keycloak-config-secrets.sh
+        env:
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
+          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          INFISICAL_INFRA_PROJECT_ID: ${{ env.INFISICAL_INFRA_PROJECT_ID }}
+          INFISICAL_API_URL: ${{ env.INFISICAL_API_URL }}
+          INFISICAL_ENV: ${{ env.INFISICAL_ENV }}
+          INFISICAL_SECRET_PATH: ${{ env.INFISICAL_SECRET_PATH }}
+
+      - uses: pulumi/actions@v5
+        with:
+          command: ${{ inputs.command || 'up' }}
+          stack-name: keycloak-config
+          work-dir: pulumi
+          cloud-url: ${{ env.PULUMI_BACKEND_URL }}
+          upsert: true
+          pulumi-args: ${{ (inputs.command || 'up') == 'up' && '--yes' || '' }}
+          comment-on-pr: false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
+          AWS_EC2_METADATA_DISABLED: true
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+          PULUMI_ORG: ${{ env.PULUMI_ORG }}
+          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
+          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
