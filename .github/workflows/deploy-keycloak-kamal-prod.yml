@@ -209,13 +209,13 @@ jobs:
       github.event_name == 'workflow_dispatch' && inputs.apply_keycloak_config == true
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger pulumi-infra keycloak-config (private repo)
+      - name: Trigger keycloak-config Pulumi stack
         env:
           GH_TOKEN: ${{ secrets.GH_INFRA_TOKEN }}
         run: |
           set -euo pipefail
-          [ -n "${GH_TOKEN:-}" ] || { echo "::error::GH_INFRA_TOKEN required to trigger pulumi-infra workflow"; exit 1; }
+          [ -n "${GH_TOKEN:-}" ] || { echo "::error::GH_INFRA_TOKEN required to trigger keycloak-config workflow"; exit 1; }
           gh workflow run pulumi-keycloak-config.yml \
-            --repo Avocado-Technology/pulumi-infra \
+            --repo Avocado-Technology/keycloak \
             -f command=up
-          echo "✓ Started pulumi-keycloak-config in pulumi-infra (watch Actions there for avcd realm apply)"
+          echo "✓ Started pulumi-keycloak-config in keycloak repo (watch Actions there for avcd realm apply)"
