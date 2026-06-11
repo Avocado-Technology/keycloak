@@ -1,0 +1,29 @@
+import * as fs from "fs";
+import * as path from "path";
+
+const clientsSource = fs.readFileSync(
+  path.join(__dirname, "../../src/keycloak-config/clients.ts"),
+  "utf8",
+);
+
+describe("avcd-ai Keycloak default client scopes", () => {
+  it("GivenAvcdAiClient_WhenDefaultScopesConfigured_ThenIncludesMcpAudienceAndOfflineAccess", () => {
+    const blockStart = clientsSource.indexOf("client-ai-default-scopes");
+    expect(blockStart).toBeGreaterThan(-1);
+
+    const block = clientsSource.slice(blockStart, blockStart + 600);
+    expect(block).toContain("scopes.mcpAudienceScope.name");
+    expect(block).toContain('"offline_access"');
+    expect(block).toContain(
+      "dependsOn: [aiClient, scopes.subjectScope, scopes.mcpAudienceScope]",
+    );
+  });
+
+  it("GivenAvcdMcpClient_WhenDefaultScopesConfigured_ThenIncludesMcpAudience", () => {
+    const blockStart = clientsSource.indexOf("client-mcp-default-scopes");
+    expect(blockStart).toBeGreaterThan(-1);
+
+    const block = clientsSource.slice(blockStart, blockStart + 400);
+    expect(block).toContain("scopes.mcpAudienceScope.name");
+  });
+});

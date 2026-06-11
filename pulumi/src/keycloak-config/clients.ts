@@ -205,12 +205,14 @@ export function createAvcdClients(
         "email",
         "profile",
         "roles",
+        scopes.mcpAudienceScope.name,
+        "offline_access",
       ],
     },
     {
       parent,
       provider,
-      dependsOn: [aiClient, scopes.subjectScope],
+      dependsOn: [aiClient, scopes.subjectScope, scopes.mcpAudienceScope],
     },
   );
 
