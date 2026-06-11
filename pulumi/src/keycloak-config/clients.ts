@@ -19,6 +19,11 @@ import {
   DEFAULT_ODOO_PUBLIC_HOST,
 } from "./odooClientUrls";
 import {
+  buildMcpRedirectUris,
+  buildMcpWebOrigins,
+  DEFAULT_MCP_PUBLIC_HOST,
+} from "./mcpClientUrls";
+import {
   buildWebPostLogoutRedirectUris,
   buildWebRedirectUris,
   buildWebWebOrigins,
@@ -39,25 +44,6 @@ export interface AvcdClientsResult {
   contaAzulApiClient: keycloak.openid.Client;
 }
 
-function mcpRedirectUris(domain: string): string[] {
-  return [
-    "http://localhost:3001/mcp/oauth/callback",
-    "http://localhost:3001/callback",
-    `https://dev.${domain}/mcp/oauth/callback`,
-    `https://dev.${domain}/callback`,
-    "https://claude.ai/api/mcp/auth_callback",
-    "https://claude.com/api/mcp/auth_callback",
-  ];
-}
-
-function mcpWebOrigins(domain: string): string[] {
-  return [
-    "http://localhost:3001",
-    `https://dev.${domain}`,
-    `https://${domain}`,
-  ];
-}
-
 export function createAvcdClients(
   name: string,
   realmId: pulumi.Input<string>,
@@ -65,6 +51,7 @@ export function createAvcdClients(
   odooPublicHost: string,
   aiPublicHost: string,
   frappePublicHost: string,
+  mcpPublicHost: string,
   scopes: AvcdScopesResult,
   aiAccessRoleId: pulumi.Input<string>,
   odooClientSecret: pulumi.Input<string>,
@@ -78,6 +65,7 @@ export function createAvcdClients(
   const resolvedAiPublicHost = aiPublicHost || DEFAULT_AI_PUBLIC_HOST;
   const resolvedFrappePublicHost =
     frappePublicHost || DEFAULT_FRAPPE_PUBLIC_HOST;
+  const resolvedMcpPublicHost = mcpPublicHost || DEFAULT_MCP_PUBLIC_HOST;
   const webClient = new keycloak.openid.Client(
     `${name}-client-web`,
     {
@@ -128,8 +116,8 @@ export function createAvcdClients(
       directAccessGrantsEnabled: false,
       serviceAccountsEnabled: false,
       fullScopeAllowed: true,
-      validRedirectUris: mcpRedirectUris(domain),
-      webOrigins: mcpWebOrigins(domain),
+      validRedirectUris: buildMcpRedirectUris(resolvedMcpPublicHost, domain),
+      webOrigins: buildMcpWebOrigins(resolvedMcpPublicHost, domain),
       pkceCodeChallengeMethod: "S256",
     },
     { parent, provider },

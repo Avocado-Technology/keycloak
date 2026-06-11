@@ -28,6 +28,8 @@ export interface KeycloakConfigArgs {
   contaAzulPublicHost?: string;
   /** Traefik path prefix on shared host, e.g. /conta-azul-service */
   contaAzulPublicPath?: string;
+  /** Public MCP hostname (FQDN), e.g. dev.avocado.tech — path is always /mcp */
+  mcpPublicHost?: string;
   keycloakUrl: string;
   apiAudience?: string;
   mcpAudience?: string;
@@ -119,6 +121,7 @@ export function loadKeycloakConfigFromPulumi(
       cfg.get("contaAzulPublicHost") ?? DEFAULT_CONTA_AZUL_PUBLIC_HOST,
     contaAzulPublicPath:
       cfg.get("contaAzulPublicPath") ?? DEFAULT_CONTA_AZUL_PUBLIC_PATH,
+    mcpPublicHost: cfg.get("mcpPublicHost"),
     keycloakUrl,
     apiAudience: cfg.get("apiAudience"),
     mcpAudience: cfg.get("mcpAudience"),

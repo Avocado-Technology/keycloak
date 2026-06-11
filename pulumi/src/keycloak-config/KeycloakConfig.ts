@@ -121,6 +121,7 @@ export class KeycloakConfig extends pulumi.ComponentResource {
       args.odooPublicHost ?? "",
       args.aiPublicHost ?? "",
       args.frappePublicHost ?? "",
+      args.mcpPublicHost ?? "",
       scopes,
       aiAccessRole.id,
       odooClientSecret,
