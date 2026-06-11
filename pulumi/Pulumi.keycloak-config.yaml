@@ -1,0 +1,19 @@
+config:
+  avcd-infra:domain: avcd.ai
+  avcd-infra:odooPublicHost: odoo.dev.avocado.tech
+  avcd-infra:aiPublicHost: ai.dev.avocado.tech
+  avcd-infra:frappePublicHost: dev.avocado.tech
+  avcd-infra:contaAzulPublicHost: dev.avocado.tech
+  avcd-infra:contaAzulPublicPath: /conta-azul-service
+  avcd-infra:keycloakUrl: https://auth.avcd.ai
+  avcd-infra:keycloakAdminUsername: admin
+  # Set before preview/up (CI exports from Infisical /keycloak):
+  #   bash scripts/set-keycloak-config-secrets.sh
+  #   pulumi config set --secret keycloakAdminPassword <value> --stack keycloak-config
+  avcd-infra:apiAudience: https://dev.avcd.ai/api
+  avcd-infra:mcpAudience: https://dev.avcd.ai/mcp
+  avcd-infra:enableGoogleIdentityProvider: "true"
+  avcd-infra:includeLocalhostGoogleRedirectUri: "true"
+  # Optional Google OAuth (skip IdP when unset):
+  # pulumi config set --secret googleClientId <id> --stack keycloak-config
+  # pulumi config set --secret googleClientSecret <secret> --stack keycloak-config
