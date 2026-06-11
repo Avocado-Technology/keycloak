@@ -90,6 +90,15 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
           AWS_EC2_METADATA_DISABLED: true
 
+      - name: Adopt existing Keycloak state (brownfield)
+        shell: bash
+        run: bash scripts/adopt-keycloak-config-state.sh
+        env:
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
+          AWS_EC2_METADATA_DISABLED: true
+
       - uses: pulumi/actions@v5
         with:
           command: ${{ inputs.command || 'up' }}
