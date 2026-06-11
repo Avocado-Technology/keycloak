@@ -86,6 +86,9 @@ jobs:
           INFISICAL_API_URL: ${{ env.INFISICAL_API_URL }}
           INFISICAL_ENV: ${{ env.INFISICAL_ENV }}
           INFISICAL_SECRET_PATH: ${{ env.INFISICAL_SECRET_PATH }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
+          AWS_EC2_METADATA_DISABLED: true
 
       - uses: pulumi/actions@v5
         with:
