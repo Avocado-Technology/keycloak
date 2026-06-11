@@ -199,14 +199,13 @@ export function createAvcdClients(
       realmId,
       clientId: aiClient.id,
       // roles: required so access tokens include realm_access.roles (LibreChat OPENID_REQUIRED_ROLE gate)
+      // openid/profile/email/roles are realm default client scopes — do not list openid (Keycloak API rejects it).
       defaultScopes: [
-        "openid",
         scopes.subjectScope.name,
         "email",
         "profile",
         "roles",
         scopes.mcpAudienceScope.name,
-        "offline_access",
       ],
     },
     {

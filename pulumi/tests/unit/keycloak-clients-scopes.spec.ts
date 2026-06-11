@@ -13,7 +13,8 @@ describe("avcd-ai Keycloak default client scopes", () => {
 
     const block = clientsSource.slice(blockStart, blockStart + 600);
     expect(block).toContain("scopes.mcpAudienceScope.name");
-    expect(block).toContain('"offline_access"');
+    expect(block).not.toContain('"openid"');
+    expect(block).not.toContain('"offline_access"');
     expect(block).toContain(
       "dependsOn: [aiClient, scopes.subjectScope, scopes.mcpAudienceScope]",
     );
