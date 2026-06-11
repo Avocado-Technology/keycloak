@@ -196,7 +196,44 @@
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": false,
-      "fullScopeAllowed": true
+      "fullScopeAllowed": true,
+      "defaultClientScopes": [
+        "openid",
+        "email",
+        "profile"
+      ],
+      "optionalClientScopes": [
+        "avcd-mcp-audience"
+      ]
+    },
+    {
+      "clientId": "avcd-ai",
+      "name": "AVCD AI Chat",
+      "description": "Confidential OIDC client for LibreChat SSO (Authorization Code Flow).",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "local-ai-client-secret",
+      "redirectUris": [
+        "http://localhost:3080/*",
+        "https://dev.avocado.tech/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3080",
+        "https://dev.avocado.tech"
+      ],
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "defaultClientScopes": [
+        "openid",
+        "email",
+        "profile",
+        "avcd-mcp-audience"
+      ]
     },
     {
       "clientId": "avcd-web",
