@@ -20,6 +20,22 @@ describe("avcd-ai Keycloak default client scopes", () => {
     );
   });
 
+  it("GivenAvcdAiClient_WhenOptionalScopesConfigured_ThenIncludesOfflineAccess", () => {
+    const blockStart = clientsSource.indexOf("client-ai-optional-scopes");
+    expect(blockStart).toBeGreaterThan(-1);
+
+    const block = clientsSource.slice(blockStart, blockStart + 400);
+    expect(block).toContain('"offline_access"');
+  });
+
+  it("GivenAvcdAiClient_WhenClientConfigured_ThenUseRefreshTokensEnabled", () => {
+    const block = clientsSource.slice(
+      clientsSource.indexOf("const aiClient = new keycloak.openid.Client"),
+      clientsSource.indexOf("client-ai-default-scopes"),
+    );
+    expect(block).toContain("useRefreshTokens: true");
+  });
+
   it("GivenAvcdMcpClient_WhenDefaultScopesConfigured_ThenIncludesMcpAudience", () => {
     const blockStart = clientsSource.indexOf("client-mcp-default-scopes");
     expect(blockStart).toBeGreaterThan(-1);

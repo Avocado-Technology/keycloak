@@ -185,6 +185,7 @@ export function createAvcdClients(
       directAccessGrantsEnabled: false,
       serviceAccountsEnabled: false,
       fullScopeAllowed: false,
+      useRefreshTokens: true,
       validRedirectUris: buildAiRedirectUris(resolvedAiPublicHost),
       validPostLogoutRedirectUris:
         buildAiPostLogoutRedirectUris(resolvedAiPublicHost),
@@ -212,6 +213,26 @@ export function createAvcdClients(
       parent,
       provider,
       dependsOn: [aiClient, scopes.subjectScope, scopes.mcpAudienceScope],
+    },
+  );
+
+  // offline_access must be optional (not default) — LibreChat requests it via OPENID_SCOPE.
+  new keycloak.openid.ClientOptionalScopes(
+    `${name}-client-ai-optional-scopes`,
+    {
+      realmId,
+      clientId: aiClient.id,
+      optionalScopes: [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt",
+      ],
+    },
+    {
+      parent,
+      provider,
+      dependsOn: [aiClient],
     },
   );
 
