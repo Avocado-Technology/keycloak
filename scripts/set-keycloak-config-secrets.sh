@@ -12,7 +12,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "${ROOT}"
+PULUMI_DIR="${ROOT}/pulumi"
+cd "${PULUMI_DIR}"
 
 STACK="${PULUMI_STACK:-keycloak-config}"
 INFISICAL_API_URL="${INFISICAL_API_URL:-https://secrets.avcd.ai/api}"
