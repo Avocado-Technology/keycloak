@@ -1,4 +1,4 @@
-.PHONY: up down logs validate clean wait test-config test-kamal infisical-check pull-secrets push-secrets push-bootstrap ensure-bootstrap-folder configure-google-idp apply-config push-client-secrets e2e-deploy e2e-google
+.PHONY: up down logs validate clean wait test-config test-kamal infisical-check pull-secrets push-secrets push-bootstrap ensure-bootstrap-folder configure-google-idp configure-mcp-dcr apply-config push-client-secrets e2e-deploy e2e-google
 
 COMPOSE ?= docker compose
 
@@ -32,6 +32,11 @@ validate: up wait
 configure-google-idp:
 	@chmod +x scripts/configure-google-idp.sh
 	./scripts/configure-google-idp.sh
+
+# After pulumi keycloak-config apply — allow Claude MCP Dynamic Client Registration
+configure-mcp-dcr:
+	@chmod +x scripts/configure-mcp-dcr-policies.sh
+	KEYCLOAK_URL=$${KEYCLOAK_URL:-https://auth.avcd.ai} bash scripts/configure-mcp-dcr-policies.sh
 
 # Deployed realm avcd — keycloak-config-cli (replaces pulumi keycloak-config stack)
 apply-config:
