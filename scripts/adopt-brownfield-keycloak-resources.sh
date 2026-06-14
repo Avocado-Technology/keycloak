@@ -56,10 +56,16 @@ trap 'rm -f "${URN_FILE}"' RETURN
 pulumi stack --show-urns --stack "${STACK}" 2>/dev/null \
   | grep -oE 'urn:pulumi:[^[:space:]]+' > "${URN_FILE}" || true
 PARENT_URN="$(grep 'KeycloakConfig::avcd' "${URN_FILE}" | head -1 || true)"
+KEYCLOAK_PROVIDER_URN="$(grep 'pulumi:providers:keycloak::keycloak' "${URN_FILE}" | head -1 || true)"
 STATE_URNS="$(cat "${URN_FILE}")"
 
 if [[ -z "${PARENT_URN}" ]]; then
   echo "Error: KeycloakConfig parent URN not found in stack ${STACK}" >&2
+  exit 1
+fi
+
+if [[ -z "${KEYCLOAK_PROVIDER_URN}" ]]; then
+  echo "Error: keycloak provider URN not found in stack ${STACK}" >&2
   exit 1
 fi
 
@@ -94,8 +100,9 @@ import_resource() {
 
   echo "Importing ${logical_name} (${import_id})"
   if ! pulumi import "${pulumi_type}" "${logical_name}" "${import_id}" \
-    --parent "${PARENT_URN}" --yes --stack "${STACK}"; then
-    echo "::warning::Import failed for ${logical_name}; pulumi up may still create or update it"
+    --parent "${PARENT_URN}" --provider "${KEYCLOAK_PROVIDER_URN}" --yes --stack "${STACK}"; then
+    echo "::error::Import failed for ${logical_name}" >&2
+    exit 1
   fi
 }
 
