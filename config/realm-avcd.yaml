@@ -1,0 +1,315 @@
+# AVCD realm — source of truth for auth.avcd.ai (keycloak-config-cli).
+# Secrets and audiences use ${env:VAR} substitution (see scripts/prepare-keycloak-config-env.sh).
+#
+# Apply: bash scripts/apply-keycloak-config.sh
+
+realm: avcd
+enabled: true
+sslRequired: external
+registrationAllowed: false
+loginWithEmailAllowed: true
+duplicateEmailsAllowed: false
+resetPasswordAllowed: false
+editUsernameAllowed: false
+bruteForceProtected: true
+failureFactor: 30
+
+roles:
+  realm:
+    - name: user
+      description: Default AVCD user role
+      composite: false
+      clientRole: false
+    - name: avcd-ai-access
+      description: Grants LibreChat (avcd-ai) access. Assign manually in Keycloak Admin — not a default realm role.
+      composite: false
+      clientRole: false
+
+defaultRole:
+  name: user
+  description: Default AVCD user role
+  composite: false
+  clientRole: false
+
+clientScopes:
+  - name: avcd-api-audience
+    description: Adds GraphQL API audience claim to access tokens
+    protocol: openid-connect
+    attributes:
+      include.in.token.scope: "true"
+      display.on.consent.screen: "false"
+    protocolMappers:
+      - name: avcd-api-audience-mapper
+        protocol: openid-connect
+        protocolMapper: oidc-audience-mapper
+        consentRequired: false
+        config:
+          included.custom.audience: "${env:API_AUDIENCE}"
+          id.token.claim: "true"
+          access.token.claim: "true"
+
+  - name: avcd-mcp-audience
+    description: Adds MCP API audience claim to access tokens
+    protocol: openid-connect
+    attributes:
+      include.in.token.scope: "true"
+      display.on.consent.screen: "false"
+    protocolMappers:
+      - name: avcd-mcp-audience-mapper
+        protocol: openid-connect
+        protocolMapper: oidc-audience-mapper
+        consentRequired: false
+        config:
+          included.custom.audience: "${env:MCP_AUDIENCE}"
+          id.token.claim: "true"
+          access.token.claim: "true"
+
+  - name: avcd-conta-azul-audience
+    description: Adds Conta Azul Service API audience claim to access tokens
+    protocol: openid-connect
+    attributes:
+      include.in.token.scope: "true"
+      display.on.consent.screen: "false"
+    protocolMappers:
+      - name: avcd-conta-azul-audience-mapper
+        protocol: openid-connect
+        protocolMapper: oidc-audience-mapper
+        consentRequired: false
+        config:
+          included.custom.audience: "${env:CONTA_AZUL_AUDIENCE}"
+          id.token.claim: "false"
+          access.token.claim: "true"
+
+  - name: avcd-conta-azul-yoga-audience
+    description: Adds Conta Azul Yoga Subgraph API audience claim to access tokens
+    protocol: openid-connect
+    attributes:
+      include.in.token.scope: "true"
+      display.on.consent.screen: "false"
+    protocolMappers:
+      - name: avcd-conta-azul-yoga-audience-mapper
+        protocol: openid-connect
+        protocolMapper: oidc-audience-mapper
+        consentRequired: false
+        config:
+          included.custom.audience: "${env:CONTA_AZUL_YOGA_AUDIENCE}"
+          id.token.claim: "false"
+          access.token.claim: "true"
+
+  - name: avcd-api-gateway-audience
+    description: Adds AVCD API Gateway (Cosmo Router) audience claim to access tokens
+    protocol: openid-connect
+    attributes:
+      include.in.token.scope: "true"
+      display.on.consent.screen: "false"
+    protocolMappers:
+      - name: avcd-api-gateway-audience-mapper
+        protocol: openid-connect
+        protocolMapper: oidc-audience-mapper
+        consentRequired: false
+        config:
+          included.custom.audience: "${env:API_GATEWAY_AUDIENCE}"
+          id.token.claim: "false"
+          access.token.claim: "true"
+
+  - name: avcd-subject
+    description: Subject (sub) claim for AVCD tokens
+    protocol: openid-connect
+    attributes:
+      include.in.token.scope: "true"
+      display.on.consent.screen: "false"
+    protocolMappers:
+      - name: sub
+        protocol: openid-connect
+        protocolMapper: oidc-sub-mapper
+        consentRequired: false
+        config:
+          introspection.token.claim: "true"
+          access.token.claim: "true"
+
+clients:
+  - clientId: avcd-web
+    name: AVCD Web Portal
+    description: Next.js web application (confidential, auth code + refresh)
+    enabled: true
+    clientAuthenticatorType: client-secret
+    secret: "${env:AVCD_WEB_CLIENT_SECRET}"
+    publicClient: false
+    protocol: openid-connect
+    standardFlowEnabled: true
+    directAccessGrantsEnabled: false
+    implicitFlowEnabled: false
+    serviceAccountsEnabled: false
+    fullScopeAllowed: true
+    attributes:
+      use.refresh.tokens: "true"
+      post.logout.redirect.uris: "http://localhost:3000##http://localhost:3000/##https://dev.avcd.ai##https://dev.avcd.ai/##https://prod.avcd.ai##https://prod.avcd.ai/##https://avcd.ai##https://avcd.ai/"
+    redirectUris:
+      - "http://localhost:3000/*"
+      - "http://localhost:3000/api/auth/callback/keycloak"
+      - "http://localhost:3000/api/auth/callback"
+      - "https://dev.avcd.ai/api/auth/callback/keycloak"
+      - "https://dev.avcd.ai/api/auth/callback"
+      - "https://prod.avcd.ai/api/auth/callback/keycloak"
+      - "https://prod.avcd.ai/api/auth/callback"
+      - "https://avcd.ai/api/auth/callback/keycloak"
+      - "https://avcd.ai/api/auth/callback"
+    webOrigins:
+      - "http://localhost:3000"
+      - "https://dev.avcd.ai"
+      - "https://prod.avcd.ai"
+      - "https://avcd.ai"
+    defaultClientScopes:
+      - avcd-subject
+      - avcd-api-audience
+      - profile
+      - email
+    optionalClientScopes:
+      - avcd-api-gateway-audience
+      - avcd-conta-azul-yoga-audience
+
+  - clientId: avcd-mcp
+    name: AVCD MCP Server
+    description: Public client with PKCE for MCP OAuth 2.1
+    enabled: true
+    publicClient: true
+    protocol: openid-connect
+    standardFlowEnabled: true
+    directAccessGrantsEnabled: false
+    implicitFlowEnabled: false
+    serviceAccountsEnabled: false
+    fullScopeAllowed: true
+    attributes:
+      pkce.code.challenge.method: S256
+    redirectUris:
+      - "http://localhost:3001/mcp/oauth/callback"
+      - "http://localhost:3001/callback"
+      - "https://dev.avcd.ai/mcp/oauth/callback"
+      - "https://dev.avcd.ai/callback"
+      - "https://dev.avocado.tech/mcp/oauth/callback"
+      - "https://dev.avocado.tech/callback"
+      - "https://claude.ai/api/mcp/auth_callback"
+      - "https://claude.com/api/mcp/auth_callback"
+    webOrigins:
+      - "http://localhost:3001"
+      - "https://dev.avcd.ai"
+      - "https://avcd.ai"
+      - "https://dev.avocado.tech"
+    defaultClientScopes:
+      - avcd-subject
+      - avcd-mcp-audience
+
+  - clientId: avcd-odoo
+    name: AVCD Odoo ERP
+    description: Confidential OIDC client for Odoo SSO (Authorization Code Flow).
+    enabled: true
+    clientAuthenticatorType: client-secret
+    secret: "${env:AVCD_ODOO_CLIENT_SECRET}"
+    publicClient: false
+    protocol: openid-connect
+    standardFlowEnabled: true
+    directAccessGrantsEnabled: false
+    implicitFlowEnabled: false
+    serviceAccountsEnabled: false
+    fullScopeAllowed: false
+    redirectUris:
+      - "http://localhost:8069/auth_oauth/signin"
+      - "https://odoo.dev.avocado.tech/auth_oauth/signin"
+      - "https://odoo.dev.avcd.ai/auth_oauth/signin"
+    webOrigins:
+      - "http://localhost:8069"
+      - "https://odoo.dev.avocado.tech"
+      - "https://odoo.dev.avcd.ai"
+    defaultClientScopes:
+      - openid
+      - avcd-subject
+      - email
+      - profile
+
+  - clientId: avcd-ai
+    name: AVCD AI Chat
+    description: Confidential OIDC client for LibreChat SSO (Authorization Code Flow).
+    enabled: true
+    clientAuthenticatorType: client-secret
+    secret: "${env:AVCD_AI_CLIENT_SECRET}"
+    publicClient: false
+    protocol: openid-connect
+    standardFlowEnabled: true
+    directAccessGrantsEnabled: false
+    implicitFlowEnabled: false
+    serviceAccountsEnabled: false
+    fullScopeAllowed: false
+    attributes:
+      use.refresh.tokens: "true"
+      post.logout.redirect.uris: "http://localhost:3080/login##https://ai.dev.avocado.tech/login"
+    redirectUris:
+      - "http://localhost:3080/oauth/openid/callback"
+      - "http://localhost:3080/api/admin/oauth/openid/callback"
+      - "https://ai.dev.avocado.tech/oauth/openid/callback"
+      - "https://ai.dev.avocado.tech/api/admin/oauth/openid/callback"
+    webOrigins:
+      - "http://localhost:3080"
+      - "https://ai.dev.avocado.tech"
+    defaultClientScopes:
+      - avcd-subject
+      - email
+      - profile
+      - roles
+      - avcd-mcp-audience
+    optionalClientScopes:
+      - address
+      - phone
+      - offline_access
+      - microprofile-jwt
+
+  - clientId: avcd-frappe
+    name: AVCD Frappe ERP
+    description: Confidential OIDC client for Frappe/ERPNext SSO (Authorization Code Flow).
+    enabled: true
+    clientAuthenticatorType: client-secret
+    secret: "${env:AVCD_FRAPPE_CLIENT_SECRET}"
+    publicClient: false
+    protocol: openid-connect
+    standardFlowEnabled: true
+    directAccessGrantsEnabled: false
+    implicitFlowEnabled: false
+    serviceAccountsEnabled: false
+    fullScopeAllowed: false
+    redirectUris:
+      - "http://localhost:8080/api/method/frappe.integrations.oauth2_logins.custom/google"
+      - "http://localhost:8080/api/method/frappe.integrations.oauth2.login_via_oauth2"
+      - "http://localhost:8088/api/method/frappe.integrations.oauth2_logins.custom/google"
+      - "http://localhost:8088/api/method/frappe.integrations.oauth2.login_via_oauth2"
+      - "https://dev.avocado.tech/api/method/frappe.integrations.oauth2_logins.custom/google"
+      - "https://dev.avocado.tech/api/method/frappe.integrations.oauth2.login_via_oauth2"
+    webOrigins:
+      - "http://localhost:8080"
+      - "https://dev.avocado.tech"
+    defaultClientScopes:
+      - openid
+      - avcd-subject
+      - email
+      - profile
+
+  - clientId: avcd-conta-azul-api
+    name: AVCD Conta Azul API
+    description: Confidential M2M client for Conta Azul Service (client_credentials grant).
+    enabled: true
+    clientAuthenticatorType: client-secret
+    secret: "${env:AVCD_CONTA_AZUL_API_CLIENT_SECRET}"
+    publicClient: false
+    protocol: openid-connect
+    standardFlowEnabled: false
+    directAccessGrantsEnabled: false
+    implicitFlowEnabled: false
+    serviceAccountsEnabled: true
+    fullScopeAllowed: false
+    defaultClientScopes:
+      - avcd-conta-azul-audience
+      - avcd-conta-azul-yoga-audience
+      - avcd-api-gateway-audience
+
+scopeMappings:
+  - client: avcd-ai
+    roles:
+      - avcd-ai-access

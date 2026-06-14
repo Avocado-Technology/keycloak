@@ -153,6 +153,28 @@
           }
         }
       ]
+    },
+    {
+      "name": "avcd-conta-azul-audience",
+      "description": "Adds Conta Azul Service API audience claim to access tokens",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "avcd-conta-azul-audience-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "http://localhost:8000",
+            "id.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ]
     }
   ],
   "defaultDefaultClientScopes": [
@@ -160,7 +182,8 @@
     "avcd-api-audience"
   ],
   "defaultOptionalClientScopes": [
-    "avcd-mcp-audience"
+    "avcd-mcp-audience",
+    "avcd-conta-azul-audience"
   ],
   "identityProviders": [
     {
@@ -317,6 +340,24 @@
       "serviceAccountsEnabled": false,
       "fullScopeAllowed": false,
       "defaultClientScopes": ["openid", "email", "profile"]
+    },
+    {
+      "clientId": "avcd-conta-azul-api",
+      "name": "AVCD Conta Azul API",
+      "description": "Confidential M2M client for Conta Azul Service (client_credentials grant).",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "local-conta-azul-api-client-secret",
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": false,
+      "defaultClientScopes": [
+        "avcd-conta-azul-audience"
+      ]
     }
   ],
   "users": [

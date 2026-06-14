@@ -1,4 +1,4 @@
-.PHONY: up down logs validate clean wait test-config test-kamal infisical-check pull-secrets push-secrets push-bootstrap ensure-bootstrap-folder configure-google-idp e2e-deploy e2e-google
+.PHONY: up down logs validate clean wait test-config test-kamal infisical-check pull-secrets push-secrets push-bootstrap ensure-bootstrap-folder configure-google-idp apply-config push-client-secrets e2e-deploy e2e-google
 
 COMPOSE ?= docker compose
 
@@ -32,6 +32,15 @@ validate: up wait
 configure-google-idp:
 	@chmod +x scripts/configure-google-idp.sh
 	./scripts/configure-google-idp.sh
+
+# Deployed realm avcd — keycloak-config-cli (replaces pulumi keycloak-config stack)
+apply-config:
+	@chmod +x scripts/apply-keycloak-config.sh scripts/prepare-keycloak-config-env.sh
+	KEYCLOAK_URL=$${KEYCLOAK_URL:-http://localhost:8080} bash scripts/apply-keycloak-config.sh
+
+push-client-secrets:
+	@chmod +x scripts/push-client-secrets-to-infisical.sh scripts/prepare-keycloak-config-env.sh
+	bash scripts/push-client-secrets-to-infisical.sh
 
 e2e-google: configure-google-idp
 	@chmod +x scripts/e2e-google-idp-validation.sh

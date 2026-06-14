@@ -53,13 +53,21 @@ AVCD realm OIDC discovery: http://localhost:8080/realms/avcd/.well-known/openid-
 | Environment | Source of truth | Mechanism |
 |-------------|-----------------|-----------|
 | **Local** | `config/avcd-realm.json` | `--import-realm` on first boot (`docker-compose.yml`) |
-| **Deployed prod** | `avcd-infra/modules/keycloak-config` | Terraform (realm apply is out of scope for Kamal deploy) |
+| **Deployed (auth.avcd.ai)** | `config/realm-avcd.yaml` | [`keycloak-config-cli`](https://github.com/adorsys/keycloak-config-cli) via `make apply-config` or [`Keycloak Config`](.github/workflows/pulumi-keycloak-config.yml) workflow |
 
-Local realm settings are imported from `config/avcd-realm.json` on first boot (`--import-realm`).
+After apply, client secrets (`KEYCLOAK_CLIENT_SECRET`, etc.) are pushed to each app’s Infisical project by `scripts/push-client-secrets-to-infisical.sh` (replaces the former `pulumi-infra` `web-secrets` / `keycloak-config` stack output chain).
 
-Shared Keycloak runs at **`https://auth.avcd.ai`** via Kamal (`deploy-keycloak-kamal-prod.yml`), official image `quay.io/keycloak/keycloak`, deploy secrets from Infisical **`/keycloak`** (written by this repo’s [`pulumi/`](pulumi/) stack `avcd-keycloak/secrets` via [`sync-infisical-secrets.yml`](.github/workflows/sync-infisical-secrets.yml); Infisical env slug `prod` = infra host catalog, not a second IdP). No `KC_*` GitHub secrets — OIDC variables on the `production` GitHub environment for CI only.
+```bash
+# Local against docker compose
+KEYCLOAK_URL=http://localhost:8080 KEYCLOAK_PASSWORD=admin make apply-config
 
-`config/avcd-realm.prod.json` is **deprecated** (reference only). Keep local JSON aligned with Terraform when adding clients for local dev.
+# Production (CI)
+gh workflow run pulumi-keycloak-config.yml -R Avocado-Technology/keycloak
+```
+
+Local realm settings are imported from `config/avcd-realm.json` on first boot (`--import-realm`). Keep `config/realm-avcd.yaml` aligned when adding clients for deployed environments.
+
+Shared Keycloak runs at **`https://auth.avcd.ai`** via Kamal; deploy secrets come from Infisical **`/keycloak`** (Pulumi `secrets` stack in [`pulumi/`](pulumi/)).
 
 To capture Admin UI changes back to git:
 
