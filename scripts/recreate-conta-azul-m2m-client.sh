@@ -74,12 +74,13 @@ fi
 
 URN_FILE="$(mktemp)"
 trap 'rm -f "${URN_FILE}"' RETURN
-pulumi stack --show-urns --stack "${STACK}" 2>/dev/null | grep -E '^urn:' > "${URN_FILE}" || true
+pulumi stack --show-urns --stack "${STACK}" 2>/dev/null \
+  | grep -oE 'urn:pulumi:[^[:space:]]+' > "${URN_FILE}" || true
 
 delete_state_if_present() {
   local logical_name="$1"
   local urn
-  urn="$(awk -v n="${logical_name}" '$0 ~ ("::" n "$") {print $1; exit}' "${URN_FILE}")"
+  urn="$(grep "::${logical_name}\$" "${URN_FILE}" | head -1 || true)"
   if [[ -z "${urn}" ]]; then
     echo "○ not in state: ${logical_name}"
     return 0
