@@ -5,6 +5,10 @@ config:
   avcd-keycloak:frappePublicHost: dev.avocado.tech
   avcd-keycloak:contaAzulPublicHost: dev.avocado.tech
   avcd-keycloak:contaAzulPublicPath: /conta-azul-service
+  avcd-keycloak:contaAzulYogaPublicHost: dev.avocado.tech
+  avcd-keycloak:contaAzulYogaPublicPath: /conta-azul-yoga-subgraph
+  avcd-keycloak:apiGatewayPublicHost: dev.avocado.tech
+  avcd-keycloak:apiGatewayPublicPath: /api-gateway
   avcd-keycloak:keycloakUrl: https://auth.avcd.ai
   avcd-keycloak:keycloakAdminUsername: admin
   # Set before preview/up (CI exports from Infisical /keycloak):

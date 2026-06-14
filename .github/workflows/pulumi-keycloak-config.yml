@@ -99,6 +99,22 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
           AWS_EC2_METADATA_DISABLED: true
 
+      - name: Import brownfield Keycloak resources (conta-azul, yoga, api-gateway)
+        shell: bash
+        run: bash scripts/adopt-brownfield-keycloak-resources.sh
+        env:
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
+          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          INFISICAL_INFRA_PROJECT_ID: ${{ env.INFISICAL_INFRA_PROJECT_ID }}
+          INFISICAL_API_URL: ${{ env.INFISICAL_API_URL }}
+          INFISICAL_ENV: ${{ env.INFISICAL_ENV }}
+          INFISICAL_SECRET_PATH: ${{ env.INFISICAL_SECRET_PATH }}
+          KEYCLOAK_URL: https://auth.avcd.ai
+          AWS_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
+          AWS_EC2_METADATA_DISABLED: true
+
       - uses: pulumi/actions@v5
         with:
           command: ${{ inputs.command || 'up' }}
