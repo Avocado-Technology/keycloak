@@ -115,6 +115,40 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
           AWS_EC2_METADATA_DISABLED: true
 
+      - name: Recreate avcd-conta-azul-api M2M client when client_credentials is broken
+        shell: bash
+        run: |
+          set -euo pipefail
+          MCP_PROJECT_ID="891adf21-6a18-4967-be44-ac6e9c9483be"
+          export INFISICAL_TOKEN="$(
+            infisical login --method=universal-auth \
+              --client-id="${INFISICAL_CLIENT_ID}" \
+              --client-secret="${INFISICAL_CLIENT_SECRET}" \
+              --domain="https://secrets.avcd.ai" --silent --plain
+          )"
+          eval "$(
+            infisical export --env=dev --path=/conta-azul-mcp \
+              --projectId="${MCP_PROJECT_ID}" --token="${INFISICAL_TOKEN}" \
+              --format=dotenv --domain="https://secrets.avcd.ai" --silent
+          )"
+          if bash scripts/verify-conta-azul-m2m-token.sh; then
+            echo "M2M client OK — no recreate needed"
+          else
+            bash scripts/recreate-conta-azul-m2m-client.sh
+          fi
+        env:
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
+          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          INFISICAL_INFRA_PROJECT_ID: ${{ env.INFISICAL_INFRA_PROJECT_ID }}
+          INFISICAL_API_URL: ${{ env.INFISICAL_API_URL }}
+          INFISICAL_ENV: ${{ env.INFISICAL_ENV }}
+          INFISICAL_SECRET_PATH: ${{ env.INFISICAL_SECRET_PATH }}
+          KEYCLOAK_URL: https://auth.avcd.ai
+          AWS_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
+          AWS_EC2_METADATA_DISABLED: true
+
       - uses: pulumi/actions@v5
         with:
           command: ${{ inputs.command || 'up' }}

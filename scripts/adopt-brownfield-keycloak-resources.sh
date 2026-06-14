@@ -156,11 +156,7 @@ import_scope_and_mapper "avcd-api-gateway-audience" \
 
 CONTA_AZUL_CLIENT_ID="$(client_internal_id "avcd-conta-azul-api")"
 if [[ -n "${CONTA_AZUL_CLIENT_ID}" && "${CONTA_AZUL_CLIENT_ID}" != "null" ]]; then
-  import_resource "keycloak:openid/client:Client" \
-    "avcd-client-conta-azul-api" "${REALM_ID}/${CONTA_AZUL_CLIENT_ID}"
-
-  import_resource "keycloak:openid/clientDefaultScopes:ClientDefaultScopes" \
-    "avcd-client-conta-azul-api-default-scopes" "${REALM_ID}/${CONTA_AZUL_CLIENT_ID}"
+  echo "○ skipping M2M client import (managed by Pulumi create/replace; import caused broken client_credentials)"
 fi
 
 echo "✓ Brownfield Keycloak resource adopt complete"
