@@ -308,12 +308,19 @@ export function createAvcdClients(
     {
       realmId,
       clientId: contaAzulApiClient.id,
-      defaultScopes: [scopes.contaAzulAudienceScope.name],
+      defaultScopes: [
+        scopes.contaAzulAudienceScope.name,
+        scopes.contaAzulYogaAudienceScope.name,
+      ],
     },
     {
       parent,
       provider,
-      dependsOn: [contaAzulApiClient, scopes.contaAzulAudienceScope],
+      dependsOn: [
+        contaAzulApiClient,
+        scopes.contaAzulAudienceScope,
+        scopes.contaAzulYogaAudienceScope,
+      ],
     },
   );
 

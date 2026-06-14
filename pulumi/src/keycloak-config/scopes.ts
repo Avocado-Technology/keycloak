@@ -6,6 +6,7 @@ export interface AvcdScopesResult {
   apiAudienceScope: keycloak.openid.ClientScope;
   mcpAudienceScope: keycloak.openid.ClientScope;
   contaAzulAudienceScope: keycloak.openid.ClientScope;
+  contaAzulYogaAudienceScope: keycloak.openid.ClientScope;
   /** Custom scope for `sub` claim — must not be named `openid` (breaks OIDC scope validation). */
   subjectScope: keycloak.openid.ClientScope;
 }
@@ -90,6 +91,31 @@ export function createAvcdScopes(
     { parent, provider, dependsOn: [contaAzulAudienceScope] },
   );
 
+  const contaAzulYogaAudienceScope = new keycloak.openid.ClientScope(
+    `${name}-scope-conta-azul-yoga-audience`,
+    {
+      realmId,
+      name: "avcd-conta-azul-yoga-audience",
+      description:
+        "Adds Conta Azul Yoga Subgraph API audience claim to access tokens",
+      includeInTokenScope: true,
+    },
+    { parent, provider },
+  );
+
+  new keycloak.openid.AudienceProtocolMapper(
+    `${name}-mapper-conta-azul-yoga-audience`,
+    {
+      realmId,
+      clientScopeId: contaAzulYogaAudienceScope.id,
+      name: "avcd-conta-azul-yoga-audience-mapper",
+      includedCustomAudience: audiences.contaAzulYogaAudience,
+      addToIdToken: false,
+      addToAccessToken: true,
+    },
+    { parent, provider, dependsOn: [contaAzulYogaAudienceScope] },
+  );
+
   const subjectScope = new keycloak.openid.ClientScope(
     `${name}-scope-subject`,
     {
@@ -117,6 +143,7 @@ export function createAvcdScopes(
     apiAudienceScope,
     mcpAudienceScope,
     contaAzulAudienceScope,
+    contaAzulYogaAudienceScope,
     subjectScope,
   };
 }

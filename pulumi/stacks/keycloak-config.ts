@@ -20,6 +20,8 @@ const keycloakConfig = new KeycloakConfig("avcd", {
   aiPublicHost: cfg.aiPublicHost,
   frappePublicHost: cfg.frappePublicHost,
   contaAzulPublicHost: cfg.contaAzulPublicHost,
+  contaAzulYogaPublicHost: cfg.contaAzulYogaPublicHost,
+  contaAzulYogaPublicPath: cfg.contaAzulYogaPublicPath,
   apiAudience: cfg.apiAudience,
   mcpAudience: cfg.mcpAudience,
   enableGoogleIdentityProvider: cfg.enableGoogleIdentityProvider,

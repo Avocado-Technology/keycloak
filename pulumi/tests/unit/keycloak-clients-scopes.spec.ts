@@ -43,4 +43,13 @@ describe("avcd-ai Keycloak default client scopes", () => {
     const block = clientsSource.slice(blockStart, blockStart + 400);
     expect(block).toContain("scopes.mcpAudienceScope.name");
   });
+
+  it("GivenAvcdContaAzulApiClient_WhenDefaultScopesConfigured_ThenIncludesContaAzulAndYogaAudiences", () => {
+    const blockStart = clientsSource.indexOf("client-conta-azul-api-default-scopes");
+    expect(blockStart).toBeGreaterThan(-1);
+
+    const block = clientsSource.slice(blockStart, blockStart + 500);
+    expect(block).toContain("scopes.contaAzulAudienceScope.name");
+    expect(block).toContain("scopes.contaAzulYogaAudienceScope.name");
+  });
 });
