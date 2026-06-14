@@ -223,7 +223,8 @@
       "defaultClientScopes": [
         "openid",
         "email",
-        "profile"
+        "profile",
+        "avcd-api-audience"
       ],
       "optionalClientScopes": [
         "avcd-mcp-audience"
