@@ -7,6 +7,7 @@ export interface AvcdScopesResult {
   mcpAudienceScope: keycloak.openid.ClientScope;
   contaAzulAudienceScope: keycloak.openid.ClientScope;
   contaAzulYogaAudienceScope: keycloak.openid.ClientScope;
+  apiGatewayAudienceScope: keycloak.openid.ClientScope;
   /** Custom scope for `sub` claim — must not be named `openid` (breaks OIDC scope validation). */
   subjectScope: keycloak.openid.ClientScope;
 }
@@ -116,6 +117,31 @@ export function createAvcdScopes(
     { parent, provider, dependsOn: [contaAzulYogaAudienceScope] },
   );
 
+  const apiGatewayAudienceScope = new keycloak.openid.ClientScope(
+    `${name}-scope-api-gateway-audience`,
+    {
+      realmId,
+      name: "avcd-api-gateway-audience",
+      description:
+        "Adds AVCD API Gateway (Cosmo Router) audience claim to access tokens",
+      includeInTokenScope: true,
+    },
+    { parent, provider },
+  );
+
+  new keycloak.openid.AudienceProtocolMapper(
+    `${name}-mapper-api-gateway-audience`,
+    {
+      realmId,
+      clientScopeId: apiGatewayAudienceScope.id,
+      name: "avcd-api-gateway-audience-mapper",
+      includedCustomAudience: audiences.apiGatewayAudience,
+      addToIdToken: false,
+      addToAccessToken: true,
+    },
+    { parent, provider, dependsOn: [apiGatewayAudienceScope] },
+  );
+
   const subjectScope = new keycloak.openid.ClientScope(
     `${name}-scope-subject`,
     {
@@ -144,6 +170,7 @@ export function createAvcdScopes(
     mcpAudienceScope,
     contaAzulAudienceScope,
     contaAzulYogaAudienceScope,
+    apiGatewayAudienceScope,
     subjectScope,
   };
 }

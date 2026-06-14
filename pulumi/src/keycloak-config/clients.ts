@@ -105,6 +105,27 @@ export function createAvcdClients(
     },
   );
 
+  new keycloak.openid.ClientOptionalScopes(
+    `${name}-client-web-optional-scopes`,
+    {
+      realmId,
+      clientId: webClient.id,
+      optionalScopes: [
+        scopes.apiGatewayAudienceScope.name,
+        scopes.contaAzulYogaAudienceScope.name,
+      ],
+    },
+    {
+      parent,
+      provider,
+      dependsOn: [
+        webClient,
+        scopes.apiGatewayAudienceScope,
+        scopes.contaAzulYogaAudienceScope,
+      ],
+    },
+  );
+
   const mcpClient = new keycloak.openid.Client(
     `${name}-client-mcp`,
     {
@@ -311,6 +332,7 @@ export function createAvcdClients(
       defaultScopes: [
         scopes.contaAzulAudienceScope.name,
         scopes.contaAzulYogaAudienceScope.name,
+        scopes.apiGatewayAudienceScope.name,
       ],
     },
     {
@@ -320,6 +342,7 @@ export function createAvcdClients(
         contaAzulApiClient,
         scopes.contaAzulAudienceScope,
         scopes.contaAzulYogaAudienceScope,
+        scopes.apiGatewayAudienceScope,
       ],
     },
   );

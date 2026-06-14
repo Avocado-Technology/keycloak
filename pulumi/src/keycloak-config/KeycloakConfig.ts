@@ -58,6 +58,9 @@ export class KeycloakConfig extends pulumi.ComponentResource {
       args.contaAzulYogaPublicHost,
       undefined,
       args.contaAzulYogaPublicPath,
+      args.apiGatewayPublicHost,
+      undefined,
+      args.apiGatewayPublicPath,
     );
 
     const { realm } = createAvcdRealm(name, args.provider, this);

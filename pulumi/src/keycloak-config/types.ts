@@ -7,6 +7,11 @@ import {
   DEFAULT_CONTA_AZUL_PUBLIC_PATH,
 } from "./contaAzulClientUrls";
 import {
+  buildApiGatewayAudience,
+  DEFAULT_API_GATEWAY_PUBLIC_HOST,
+  DEFAULT_API_GATEWAY_PUBLIC_PATH,
+} from "./apiGatewayClientUrls";
+import {
   buildContaAzulYogaAudience,
   DEFAULT_CONTA_AZUL_YOGA_PUBLIC_HOST,
   DEFAULT_CONTA_AZUL_YOGA_PUBLIC_PATH,
@@ -37,6 +42,10 @@ export interface KeycloakConfigArgs {
   contaAzulYogaPublicHost?: string;
   /** Traefik path prefix for yoga subgraph, e.g. /conta-azul-yoga-subgraph */
   contaAzulYogaPublicPath?: string;
+  /** Public API Gateway hostname (FQDN), e.g. dev.avocado.tech */
+  apiGatewayPublicHost?: string;
+  /** Traefik path prefix for API Gateway, e.g. /api-gateway */
+  apiGatewayPublicPath?: string;
   /** Public MCP hostname (FQDN), e.g. dev.avocado.tech — path is always /mcp */
   mcpPublicHost?: string;
   keycloakUrl: string;
@@ -61,6 +70,7 @@ export interface ResolvedAudiences {
   mcpAudience: string;
   contaAzulAudience: string;
   contaAzulYogaAudience: string;
+  apiGatewayAudience: string;
 }
 
 export function resolveAudiences(
@@ -73,6 +83,9 @@ export function resolveAudiences(
   contaAzulYogaPublicHost?: string,
   contaAzulYogaAudience?: string,
   contaAzulYogaPublicPath?: string,
+  apiGatewayPublicHost?: string,
+  apiGatewayAudience?: string,
+  apiGatewayPublicPath?: string,
 ): ResolvedAudiences {
   const resolvedContaAzulHost =
     contaAzulPublicHost ?? DEFAULT_CONTA_AZUL_PUBLIC_HOST;
@@ -82,6 +95,10 @@ export function resolveAudiences(
     contaAzulYogaPublicHost ?? DEFAULT_CONTA_AZUL_YOGA_PUBLIC_HOST;
   const resolvedContaAzulYogaPath =
     contaAzulYogaPublicPath ?? DEFAULT_CONTA_AZUL_YOGA_PUBLIC_PATH;
+  const resolvedApiGatewayHost =
+    apiGatewayPublicHost ?? DEFAULT_API_GATEWAY_PUBLIC_HOST;
+  const resolvedApiGatewayPath =
+    apiGatewayPublicPath ?? DEFAULT_API_GATEWAY_PUBLIC_PATH;
   return {
     apiAudience: apiAudience ?? `https://dev.${domain}/api`,
     mcpAudience: mcpAudience ?? `https://dev.${domain}/mcp`,
@@ -94,6 +111,9 @@ export function resolveAudiences(
         resolvedContaAzulYogaHost,
         resolvedContaAzulYogaPath,
       ),
+    apiGatewayAudience:
+      apiGatewayAudience ??
+      buildApiGatewayAudience(resolvedApiGatewayHost, resolvedApiGatewayPath),
   };
 }
 
@@ -149,6 +169,10 @@ export function loadKeycloakConfigFromPulumi(
     contaAzulYogaPublicPath:
       cfg.get("contaAzulYogaPublicPath") ??
       DEFAULT_CONTA_AZUL_YOGA_PUBLIC_PATH,
+    apiGatewayPublicHost:
+      cfg.get("apiGatewayPublicHost") ?? DEFAULT_API_GATEWAY_PUBLIC_HOST,
+    apiGatewayPublicPath:
+      cfg.get("apiGatewayPublicPath") ?? DEFAULT_API_GATEWAY_PUBLIC_PATH,
     mcpPublicHost: cfg.get("mcpPublicHost"),
     keycloakUrl,
     apiAudience: cfg.get("apiAudience"),
