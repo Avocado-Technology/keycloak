@@ -51,13 +51,16 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 1
 fi
 
-PARENT_URN="$(pulumi stack --show-urns --stack "${STACK}" 2>/dev/null | awk '/KeycloakConfig::avcd/ {print $1; exit}')"
+URN_FILE="$(mktemp)"
+trap 'rm -f "${URN_FILE}"' RETURN
+pulumi stack --show-urns --stack "${STACK}" > "${URN_FILE}" 2>/dev/null || true
+PARENT_URN="$(awk '/KeycloakConfig::avcd/ {print $1; exit}' "${URN_FILE}")"
+STATE_URNS="$(cat "${URN_FILE}")"
+
 if [[ -z "${PARENT_URN}" ]]; then
   echo "Error: KeycloakConfig parent URN not found in stack ${STACK}" >&2
   exit 1
 fi
-
-STATE_URNS="$(pulumi stack --show-urns --stack "${STACK}" 2>/dev/null || true)"
 
 in_state() {
   local logical_name="$1"
