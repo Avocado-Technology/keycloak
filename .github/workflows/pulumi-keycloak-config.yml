@@ -117,6 +117,7 @@ jobs:
 
       - name: Recreate avcd-conta-azul-api M2M client when client_credentials is broken
         shell: bash
+        working-directory: pulumi
         run: |
           set -euo pipefail
           MCP_PROJECT_ID="891adf21-6a18-4967-be44-ac6e9c9483be"
@@ -126,15 +127,23 @@ jobs:
               --client-secret="${INFISICAL_CLIENT_SECRET}" \
               --domain="https://secrets.avcd.ai" --silent --plain
           )"
-          eval "$(
+          if ! eval "$(
             infisical export --env=dev --path=/conta-azul-mcp \
               --projectId="${MCP_PROJECT_ID}" --token="${INFISICAL_TOKEN}" \
-              --format=dotenv --domain="https://secrets.avcd.ai" --silent
-          )"
-          if bash scripts/verify-conta-azul-m2m-token.sh; then
+              --format=dotenv --domain="https://secrets.avcd.ai" --silent 2>/dev/null
+          )"; then
+            echo "Infisical export for conta-azul-mcp empty — using Pulumi stack output"
+          fi
+          if [[ -z "${KEYCLOAK_CLIENT_SECRET:-}" ]]; then
+            export KEYCLOAK_CLIENT_SECRET="$(
+              pulumi stack output contaAzulApiClientSecret --show-secrets --stack keycloak-config 2>/dev/null || true
+            )"
+          fi
+          : "${KEYCLOAK_CLIENT_SECRET:?KEYCLOAK_CLIENT_SECRET required for M2M verify}"
+          if bash ../scripts/verify-conta-azul-m2m-token.sh; then
             echo "M2M client OK — no recreate needed"
           else
-            bash scripts/recreate-conta-azul-m2m-client.sh
+            bash ../scripts/recreate-conta-azul-m2m-client.sh
           fi
         env:
           PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
