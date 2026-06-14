@@ -147,7 +147,7 @@ import_scope_and_mapper() {
   mapper_id="$(mapper_id_by_name "${scope_id}" "${scope_name}-mapper")"
   if [[ -n "${mapper_id}" && "${mapper_id}" != "null" ]]; then
     import_resource "keycloak:openid/audienceProtocolMapper:AudienceProtocolMapper" \
-      "${mapper_logical}" "${REALM_ID}/${scope_id}/${mapper_id}"
+      "${mapper_logical}" "${REALM_ID}/client-scope/${scope_id}/${mapper_id}"
   fi
 }
 
