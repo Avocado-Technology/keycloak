@@ -74,7 +74,7 @@ fi
 
 URN_FILE="$(mktemp)"
 trap 'rm -f "${URN_FILE}"' RETURN
-pulumi stack --show-urns --stack "${STACK}" 2>/dev/null | rg '^urn:' > "${URN_FILE}" || true
+pulumi stack --show-urns --stack "${STACK}" 2>/dev/null | grep -E '^urn:' > "${URN_FILE}" || true
 
 delete_state_if_present() {
   local logical_name="$1"

@@ -53,7 +53,7 @@ fi
 
 URN_FILE="$(mktemp)"
 trap 'rm -f "${URN_FILE}"' RETURN
-pulumi stack --show-urns --stack "${STACK}" 2>/dev/null | rg '^urn:' > "${URN_FILE}" || true
+pulumi stack --show-urns --stack "${STACK}" 2>/dev/null | grep -E '^urn:' > "${URN_FILE}" || true
 PARENT_URN="$(awk '/KeycloakConfig::avcd/ {print $1; exit}' "${URN_FILE}")"
 STATE_URNS="$(cat "${URN_FILE}")"
 
