@@ -89,8 +89,10 @@ import_resource() {
   fi
 
   echo "Importing ${logical_name} (${import_id})"
-  pulumi import "${pulumi_type}" "${logical_name}" "${import_id}" \
-    --parent "${PARENT_URN}" --yes --stack "${STACK}"
+  if ! pulumi import "${pulumi_type}" "${logical_name}" "${import_id}" \
+    --parent "${PARENT_URN}" --yes --stack "${STACK}"; then
+    echo "::warning::Import failed for ${logical_name}; pulumi up may still create or update it"
+  fi
 }
 
 KC_TOKEN="$(kc_token)"
@@ -99,20 +101,20 @@ CLIENT_SCOPES_JSON="$(kc_get "/realms/${REALM_NAME}/client-scopes")"
 
 scope_id_by_name() {
   local name="$1"
-  jq -r --arg n "${name}" '.[] | select(.name == $n) | .id' <<<"${CLIENT_SCOPES_JSON}" | head -1
+  jq -r --arg n "${name}" '[.[] | select(.name == $n) | .id][0] // empty' <<<"${CLIENT_SCOPES_JSON}"
 }
 
 mapper_id_by_name() {
   local scope_id="$1"
   local mapper_name="$2"
   kc_get "/realms/${REALM_NAME}/client-scopes/${scope_id}/protocol-mappers/models" \
-    | jq -r --arg n "${mapper_name}" '.[] | select(.name == $n) | .id' | head -1
+    | jq -r --arg n "${mapper_name}" '[.[] | select(.name == $n) | .id][0] // empty'
 }
 
 client_internal_id() {
   local client_id="$1"
   kc_get "/realms/${REALM_NAME}/clients" \
-    | jq -r --arg c "${client_id}" '.[] | select(.clientId == $c) | .id' | head -1
+    | jq -r --arg c "${client_id}" '[.[] | select(.clientId == $c) | .id][0] // empty'
 }
 
 import_scope_and_mapper() {
