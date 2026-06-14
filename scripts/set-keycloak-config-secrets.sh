@@ -47,13 +47,23 @@ if [ -z "${INFISICAL_TOKEN:-}" ]; then
 fi
 
 : "${INFISICAL_INFRA_PROJECT_ID:?INFISICAL_INFRA_PROJECT_ID required (avcd-infra project id)}"
+MCP_PROJECT_ID="${INFISICAL_MCP_PROJECT_ID:-891adf21-6a18-4967-be44-ac6e9c9483be}"
+MCP_INFISICAL_ENV="${MCP_INFISICAL_ENV:-dev}"
 
 TMP="$(mktemp)"
-trap 'rm -f "${TMP}"' EXIT
+MCP_TMP="$(mktemp)"
+trap 'rm -f "${TMP}" "${MCP_TMP}"' EXIT
 
 infisical export --env="${INFISICAL_ENV}" --path="${INFISICAL_SECRET_PATH}" \
   --projectId="${INFISICAL_INFRA_PROJECT_ID}" --token="${INFISICAL_TOKEN}" \
   --format=dotenv --domain="${INFISICAL_HOST}" --silent > "${TMP}"
+
+if infisical export --env="${MCP_INFISICAL_ENV}" --path=/conta-azul-mcp \
+  --projectId="${MCP_PROJECT_ID}" --token="${INFISICAL_TOKEN}" \
+  --format=dotenv --domain="${INFISICAL_HOST}" --silent > "${MCP_TMP}" 2>/dev/null; then
+  # shellcheck disable=SC1090
+  source "${MCP_TMP}"
+fi
 
 # shellcheck disable=SC1090
 source "${TMP}"
@@ -70,6 +80,11 @@ if [ -n "${GOOGLE_CLIENT_ID:-}" ] && [ -n "${GOOGLE_CLIENT_SECRET:-}" ]; then
   pulumi config set --secret googleClientId "${GOOGLE_CLIENT_ID}" --stack "${STACK}"
   pulumi config set --secret googleClientSecret "${GOOGLE_CLIENT_SECRET}" --stack "${STACK}"
   echo "✓ googleClientId / googleClientSecret set from Infisical (if present)"
+fi
+
+if [ -n "${KEYCLOAK_CLIENT_SECRET:-}" ]; then
+  pulumi config set --secret contaAzulApiClientSecret "${KEYCLOAK_CLIENT_SECRET}" --stack "${STACK}"
+  echo "✓ contaAzulApiClientSecret set from Infisical conta-azul-mcp"
 fi
 
 echo "✓ keycloakAdminPassword set on stack ${STACK}"
