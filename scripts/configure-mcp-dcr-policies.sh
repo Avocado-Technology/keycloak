@@ -111,6 +111,7 @@ fi
 echo "[mcp-dcr] Trusted Hosts updated (host-sending-registration-request-must-match=false)"
 
 ALLOWED_SCOPES=(
+  "openid"
   "role_list"
   "saml_organization"
   "profile"
@@ -241,6 +242,35 @@ if [[ "${CLAUDE_DCR_CODE}" == "201" || "${CLAUDE_DCR_CODE}" == "200" ]]; then
 else
   echo "[mcp-dcr] DCR smoke failed claudeai scope HTTP ${CLAUDE_DCR_CODE}" >&2
   cat /tmp/kc-dcr-claudeai-response.json >&2
+  exit 1
+fi
+
+echo "[mcp-dcr] Verifying DCR with openid scope (critical for Claude)..."
+OPENID_DCR_CODE="$(
+  curl -sS -o /tmp/kc-dcr-openid-response.json -w '%{http_code}' \
+    -X POST "${KEYCLOAK_URL}/realms/${REALM}/clients-registrations/openid-connect" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "client_name": "mcp-dcr-openid-smoke",
+      "redirect_uris": ["https://claude.ai/api/mcp/auth_callback"],
+      "token_endpoint_auth_method": "none",
+      "grant_types": ["authorization_code", "refresh_token"],
+      "response_types": ["code"],
+      "scope": "openid profile email offline_access"
+    }'
+)"
+
+if [[ "${OPENID_DCR_CODE}" == "201" || "${OPENID_DCR_CODE}" == "200" ]]; then
+  CLIENT_ID="$(jq -r '.client_id // empty' /tmp/kc-dcr-openid-response.json)"
+  echo "[mcp-dcr] DCR smoke OK openid scope (client_id=${CLIENT_ID})"
+  if [[ -n "${CLIENT_ID}" ]]; then
+    curl -sf -X DELETE \
+      "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=${CLIENT_ID}" \
+      -H "Authorization: Bearer ${TOKEN}" >/dev/null || true
+  fi
+else
+  echo "[mcp-dcr] DCR smoke failed openid scope HTTP ${OPENID_DCR_CODE}" >&2
+  cat /tmp/kc-dcr-openid-response.json >&2
   exit 1
 fi
 
