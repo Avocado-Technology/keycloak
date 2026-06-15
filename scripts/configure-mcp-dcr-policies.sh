@@ -187,6 +187,53 @@ for scope_name in "${DEFAULT_SCOPE_NAMES[@]}"; do
   echo "[mcp-dcr] Default client scope ${scope_name} ensured"
 done
 
+# ---------------------------------------------------------------------------
+# Fix: Keycloak does NOT inherit realm default scopes for DCR-registered
+# clients. Only `basic` gets assigned. Tokens therefore lack
+# aud=https://dev.avocado.tech/mcp, and Apollo MCP rejects them.
+#
+# Strategy: Find any remaining DCR-registered clients (those with
+# only `basic` as default scope and no `avcd-mcp-audience`) and patch them.
+# This is idempotent; existing correctly-patched clients are skipped.
+# ---------------------------------------------------------------------------
+echo "[mcp-dcr] Patching existing DCR clients: adding avcd-mcp-audience default scope..."
+
+MCP_AUD_SCOPE_ID="$(
+  curl -sf "${KEYCLOAK_URL}/admin/realms/${REALM}/client-scopes" \
+    -H "Authorization: Bearer ${TOKEN}" \
+    | jq -r '.[] | select(.name=="avcd-mcp-audience") | .id'
+)"
+
+if [[ -z "${MCP_AUD_SCOPE_ID}" || "${MCP_AUD_SCOPE_ID}" == "null" ]]; then
+  echo "[mcp-dcr] avcd-mcp-audience scope not found — skipping client patch" >&2
+else
+  # Get all clients that were registered via DCR (public clients with no serviceAccountsEnabled)
+  # and are missing the avcd-mcp-audience default scope.
+  ALL_CLIENTS="$(curl -sf "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?max=200" \
+    -H "Authorization: Bearer ${TOKEN}")"
+
+  PATCHED=0
+  SKIPPED=0
+  while IFS= read -r client_id; do
+    # Check current default scopes
+    CURRENT_SCOPES="$(curl -sf "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${client_id}/default-client-scopes" \
+      -H "Authorization: Bearer ${TOKEN}" | jq -r '.[].name')"
+    if echo "${CURRENT_SCOPES}" | grep -q "avcd-mcp-audience"; then
+      SKIPPED=$((SKIPPED + 1))
+      continue
+    fi
+    # Patch: add avcd-mcp-audience
+    PATCH_CODE="$(curl -sS -o /dev/null -w '%{http_code}' \
+      -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${client_id}/default-client-scopes/${MCP_AUD_SCOPE_ID}" \
+      -H "Authorization: Bearer ${TOKEN}")"
+    if [[ "${PATCH_CODE}" == "204" || "${PATCH_CODE}" == "409" ]]; then
+      PATCHED=$((PATCHED + 1))
+    fi
+  done < <(echo "${ALL_CLIENTS}" | jq -r '.[] | select(.publicClient == true and .serviceAccountsEnabled == false) | .id')
+
+  echo "[mcp-dcr] DCR client patch: ${PATCHED} patched, ${SKIPPED} already had scope"
+fi
+
 echo "[mcp-dcr] Verifying anonymous DCR (Claude-like payload with empty scope)..."
 DCR_CODE="$(
   curl -sS -o /tmp/kc-dcr-response.json -w '%{http_code}' \
