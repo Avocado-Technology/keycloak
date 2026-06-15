@@ -1,0 +1,19 @@
+# Optional Google broker — imported only when GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET are set.
+# See scripts/apply-keycloak-config.sh
+
+realm: avcd
+
+identityProviders:
+  - alias: google
+    displayName: Google
+    providerId: google
+    enabled: true
+    trustEmail: true
+    storeToken: false
+    linkOnly: false
+    firstBrokerLoginFlowAlias: first broker login
+    config:
+      clientId: "${env:GOOGLE_CLIENT_ID}"
+      clientSecret: "${env:GOOGLE_CLIENT_SECRET}"
+      defaultScope: "openid email profile"
+      syncMode: IMPORT

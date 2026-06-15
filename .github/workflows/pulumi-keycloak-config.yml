@@ -1,30 +1,25 @@
-# Apply realm avcd clients/scopes on auth.avcd.ai (incl. avcd-conta-azul-api M2M).
-name: Pulumi Keycloak Config
+# Apply realm avcd clients/scopes on auth.avcd.ai via keycloak-config-cli.
+name: Keycloak Config
 
 on:
   workflow_dispatch:
     inputs:
-      command:
-        description: Pulumi command
+      push_secrets:
+        description: Push client secrets to Infisical after apply
         required: false
-        default: up
-        type: choice
-        options:
-          - preview
-          - up
-          - refresh
+        default: true
+        type: boolean
 
 concurrency:
-  group: keycloak-pulumi-config
+  group: keycloak-config-cli
   cancel-in-progress: true
 
 env:
-  PULUMI_BACKEND_URL: s3://avcd-infra-tfstate/pulumi?region=us-east-1&endpoint=sfo3.digitaloceanspaces.com
-  PULUMI_ORG: organization
   INFISICAL_API_URL: https://secrets.avcd.ai/api
   INFISICAL_ENV: prod
   INFISICAL_SECRET_PATH: /keycloak
   INFISICAL_INFRA_PROJECT_ID: db036f0e-7452-4e17-9573-e5471b45d65f
+  KEYCLOAK_URL: https://auth.avcd.ai
 
 permissions:
   contents: read
@@ -35,142 +30,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache-dependency-path: pulumi/package-lock.json
-
-      - name: Install Pulumi dependencies
-        working-directory: pulumi
-        run: npm ci
-
-      - name: Require repository secrets
-        shell: bash
-        working-directory: pulumi
-        run: bash scripts/ci-require-secrets.sh
-        env:
-          SPACES_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY_ID }}
-          SPACES_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
-          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
-          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
-
-      - uses: pulumi/setup-pulumi@v2
-        with:
-          pulumi-version: "3.150.0"
-
-      - name: Login to Spaces backend
-        shell: bash
-        working-directory: pulumi
-        run: pulumi login "${PULUMI_BACKEND_URL}"
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
-          AWS_EC2_METADATA_DISABLED: true
-          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-
       - name: Install Infisical CLI
         run: |
           curl -1sLf 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh' | sudo -E bash
-          sudo apt-get update && sudo apt-get install -y infisical
+          sudo apt-get update && sudo apt-get install -y infisical jq
           infisical --version
 
-      - name: Set keycloak-config stack secrets from Infisical
+      - name: Require repository secrets
         shell: bash
-        run: bash scripts/set-keycloak-config-secrets.sh
-        env:
-          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
-          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
-          INFISICAL_INFRA_PROJECT_ID: ${{ env.INFISICAL_INFRA_PROJECT_ID }}
-          INFISICAL_API_URL: ${{ env.INFISICAL_API_URL }}
-          INFISICAL_ENV: ${{ env.INFISICAL_ENV }}
-          INFISICAL_SECRET_PATH: ${{ env.INFISICAL_SECRET_PATH }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
-          AWS_EC2_METADATA_DISABLED: true
-
-      - name: Adopt existing Keycloak state (brownfield)
-        shell: bash
-        run: bash scripts/adopt-keycloak-config-state.sh
-        env:
-          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
-          AWS_EC2_METADATA_DISABLED: true
-
-      - name: Import brownfield Keycloak resources (conta-azul, yoga, api-gateway)
-        shell: bash
-        run: bash scripts/adopt-brownfield-keycloak-resources.sh
-        env:
-          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
-          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
-          INFISICAL_INFRA_PROJECT_ID: ${{ env.INFISICAL_INFRA_PROJECT_ID }}
-          INFISICAL_API_URL: ${{ env.INFISICAL_API_URL }}
-          INFISICAL_ENV: ${{ env.INFISICAL_ENV }}
-          INFISICAL_SECRET_PATH: ${{ env.INFISICAL_SECRET_PATH }}
-          KEYCLOAK_URL: https://auth.avcd.ai
-          AWS_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
-          AWS_EC2_METADATA_DISABLED: true
-
-      - name: Recreate avcd-conta-azul-api M2M client when client_credentials is broken
-        shell: bash
-        working-directory: pulumi
         run: |
-          set -euo pipefail
-          MCP_PROJECT_ID="891adf21-6a18-4967-be44-ac6e9c9483be"
-          export INFISICAL_TOKEN="$(
-            infisical login --method=universal-auth \
-              --client-id="${INFISICAL_CLIENT_ID}" \
-              --client-secret="${INFISICAL_CLIENT_SECRET}" \
-              --domain="https://secrets.avcd.ai" --silent --plain
-          )"
-          if ! eval "$(
-            infisical export --env=dev --path=/conta-azul-mcp \
-              --projectId="${MCP_PROJECT_ID}" --token="${INFISICAL_TOKEN}" \
-              --format=dotenv --domain="https://secrets.avcd.ai" --silent 2>/dev/null
-          )"; then
-            echo "Infisical export for conta-azul-mcp empty — using Pulumi stack output"
-          fi
-          if [[ -z "${KEYCLOAK_CLIENT_SECRET:-}" ]]; then
-            export KEYCLOAK_CLIENT_SECRET="$(
-              pulumi stack output contaAzulApiClientSecret --show-secrets --stack keycloak-config 2>/dev/null || true
-            )"
-          fi
-          : "${KEYCLOAK_CLIENT_SECRET:?KEYCLOAK_CLIENT_SECRET required for M2M verify}"
-          if bash ../scripts/verify-conta-azul-m2m-token.sh; then
-            echo "M2M client OK — no recreate needed"
-          else
-            bash ../scripts/recreate-conta-azul-m2m-client.sh
-          fi
+          : "${{ secrets.INFISICAL_CLIENT_ID }}"
+          : "${{ secrets.INFISICAL_CLIENT_SECRET }}"
+
+      - name: Apply Keycloak realm (keycloak-config-cli)
+        shell: bash
+        run: bash scripts/apply-keycloak-config.sh
         env:
-          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
           INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
           INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
-          INFISICAL_INFRA_PROJECT_ID: ${{ env.INFISICAL_INFRA_PROJECT_ID }}
-          INFISICAL_API_URL: ${{ env.INFISICAL_API_URL }}
-          INFISICAL_ENV: ${{ env.INFISICAL_ENV }}
-          INFISICAL_SECRET_PATH: ${{ env.INFISICAL_SECRET_PATH }}
-          KEYCLOAK_URL: https://auth.avcd.ai
-          AWS_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
-          AWS_EC2_METADATA_DISABLED: true
 
-      - uses: pulumi/actions@v5
-        with:
-          command: ${{ inputs.command || 'up' }}
-          stack-name: keycloak-config
-          work-dir: pulumi
-          cloud-url: ${{ env.PULUMI_BACKEND_URL }}
-          upsert: true
-          comment-on-pr: false
+      - name: Push client secrets to Infisical
+        if: inputs.push_secrets != false
+        shell: bash
+        run: bash scripts/push-client-secrets-to-infisical.sh
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.SPACES_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET_ACCESS_KEY }}
-          AWS_EC2_METADATA_DISABLED: true
-          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-          PULUMI_ORG: ${{ env.PULUMI_ORG }}
           INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
           INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}

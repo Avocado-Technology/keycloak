@@ -10,16 +10,6 @@ switch (stack) {
     exports.keycloakSecretsFolder = secrets.keycloakSecretsFolder;
     break;
   }
-  case "keycloak-config": {
-    const config =
-      require("./stacks/keycloak-config") as typeof import("./stacks/keycloak-config");
-    for (const [key, value] of Object.entries(config)) {
-      (exports as Record<string, unknown>)[key] = value;
-    }
-    break;
-  }
   default:
-    throw new Error(
-      `Unknown stack: ${stack}. Valid: secrets | keycloak-config`,
-    );
+    throw new Error(`Unknown stack: ${stack}. Valid: secrets`);
 }

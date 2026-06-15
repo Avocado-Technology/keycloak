@@ -2,6 +2,8 @@
 
 Syncs Keycloak Kamal deploy secrets into Infisical `/keycloak` from [`pulumi-infra`](../../pulumi-infra) `infra` stack outputs.
 
+Realm `avcd` (clients, scopes, Google IdP) is managed by **keycloak-config-cli** — see [`../config/realm-avcd.yaml`](../config/realm-avcd.yaml) and `make apply-config` in the repo root.
+
 ## Stacks
 
 | Stack | Purpose |
@@ -19,9 +21,22 @@ pulumi preview
 pulumi up --yes
 ```
 
+## Realm config (not Pulumi)
+
+```bash
+# From keycloak/ repo root
+make apply-config          # local docker
+make push-client-secrets   # sync KEYCLOAK_CLIENT_SECRET to app Infisical projects
+
+gh workflow run pulumi-keycloak-config.yml -R Avocado-Technology/keycloak
+```
+
 ## CI
 
-[`../.github/workflows/sync-infisical-secrets.yml`](../.github/workflows/sync-infisical-secrets.yml) — manual `workflow_dispatch` or `workflow_call` from deploy.
+| Workflow | Purpose |
+|----------|---------|
+| [`sync-infisical-secrets.yml`](../.github/workflows/sync-infisical-secrets.yml) | Pulumi `secrets` stack → Infisical `/keycloak` |
+| [`pulumi-keycloak-config.yml`](../.github/workflows/pulumi-keycloak-config.yml) | keycloak-config-cli apply + push client secrets |
 
 Seed GitHub secrets on `Avocado-Technology/keycloak`:
 
@@ -37,4 +52,5 @@ If migrating from `organization/avcd-infra/keycloak-secrets`, see [docs/STATE_MI
 
 ```bash
 bash ../tests/e2e/verify-infisical-keycloak.sh
+curl -sf https://auth.avcd.ai/realms/avcd/.well-known/openid-configuration | head
 ```

@@ -7,9 +7,7 @@
     "test:unit": "jest --selectProjects unit"
   },
   "dependencies": {
-    "@pulumi/keycloak": "^6.0.0",
     "@pulumi/pulumi": "^3.150.0",
-    "@pulumi/random": "^4.16.0",
     "pulumi-infisical": "^0.16.9"
   },
   "devDependencies": {
