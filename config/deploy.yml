@@ -37,6 +37,23 @@ servers:
       traefik.http.routers.avcd-keycloak.priority: "100"
       traefik.http.routers.avcd-keycloak.service: avcd-keycloak
       traefik.http.services.avcd-keycloak.loadbalancer.server.port: "8080"
+      # Claude MCP probes RFC 8414 path-insertion AS metadata before Keycloak's path-appending OIDC URL.
+      traefik.http.middlewares.avcd-keycloak-oidc-discovery-path.replacepath.path: /realms/avcd/.well-known/openid-configuration
+      traefik.http.routers.avcd-keycloak-oidc-discovery-path.rule: Host(`__KEYCLOAK_HOST__`) && Path(`/.well-known/openid-configuration/realms/avcd`)
+      traefik.http.routers.avcd-keycloak-oidc-discovery-path.entrypoints: websecure
+      traefik.http.routers.avcd-keycloak-oidc-discovery-path.tls: "true"
+      traefik.http.routers.avcd-keycloak-oidc-discovery-path.tls.certresolver: le
+      traefik.http.routers.avcd-keycloak-oidc-discovery-path.priority: "105"
+      traefik.http.routers.avcd-keycloak-oidc-discovery-path.middlewares: avcd-keycloak-oidc-discovery-path
+      traefik.http.routers.avcd-keycloak-oidc-discovery-path.service: avcd-keycloak
+      traefik.http.middlewares.avcd-keycloak-oauth-as-discovery-path.replacepath.path: /realms/avcd/.well-known/openid-configuration
+      traefik.http.routers.avcd-keycloak-oauth-as-discovery-path.rule: Host(`__KEYCLOAK_HOST__`) && Path(`/.well-known/oauth-authorization-server/realms/avcd`)
+      traefik.http.routers.avcd-keycloak-oauth-as-discovery-path.entrypoints: websecure
+      traefik.http.routers.avcd-keycloak-oauth-as-discovery-path.tls: "true"
+      traefik.http.routers.avcd-keycloak-oauth-as-discovery-path.tls.certresolver: le
+      traefik.http.routers.avcd-keycloak-oauth-as-discovery-path.priority: "105"
+      traefik.http.routers.avcd-keycloak-oauth-as-discovery-path.middlewares: avcd-keycloak-oauth-as-discovery-path
+      traefik.http.routers.avcd-keycloak-oauth-as-discovery-path.service: avcd-keycloak
 
 # Local registry: Kamal skips remote docker login (see Kamal::Configuration::Registry#local?).
 # CI runs kamal registry setup, builds from Dockerfile, pushes via SSH tunnel to the droplet.
