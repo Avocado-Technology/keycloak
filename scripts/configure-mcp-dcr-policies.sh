@@ -204,9 +204,14 @@ MCP_AUD_SCOPE_ID="$(
     | jq -r '.[] | select(.name=="avcd-mcp-audience") | .id'
 )"
 
-if [[ -z "${MCP_AUD_SCOPE_ID}" || "${MCP_AUD_SCOPE_ID}" == "null" ]]; then
+  if [[ -z "${MCP_AUD_SCOPE_ID}" || "${MCP_AUD_SCOPE_ID}" == "null" ]]; then
   echo "[mcp-dcr] avcd-mcp-audience scope not found — skipping client patch" >&2
 else
+  SUBJECT_SCOPE_ID="$(
+    curl -sf "${KEYCLOAK_URL}/admin/realms/${REALM}/client-scopes" \
+      -H "Authorization: Bearer ${TOKEN}" \
+      | jq -r '.[] | select(.name=="avcd-subject") | .id'
+  )"
   # Get all clients that were registered via DCR (public clients with no serviceAccountsEnabled)
   # and are missing the avcd-mcp-audience default scope.
   ALL_CLIENTS="$(curl -sf "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?max=200" \
@@ -222,10 +227,15 @@ else
       SKIPPED=$((SKIPPED + 1))
       continue
     fi
-    # Patch: add avcd-mcp-audience
+    # Patch: add avcd-mcp-audience (+ avcd-subject when available)
     PATCH_CODE="$(curl -sS -o /dev/null -w '%{http_code}' \
       -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${client_id}/default-client-scopes/${MCP_AUD_SCOPE_ID}" \
       -H "Authorization: Bearer ${TOKEN}")"
+    if [[ -n "${SUBJECT_SCOPE_ID}" && "${SUBJECT_SCOPE_ID}" != "null" ]]; then
+      curl -sS -o /dev/null \
+        -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${client_id}/default-client-scopes/${SUBJECT_SCOPE_ID}" \
+        -H "Authorization: Bearer ${TOKEN}" || true
+    fi
     if [[ "${PATCH_CODE}" == "204" || "${PATCH_CODE}" == "409" ]]; then
       PATCHED=$((PATCHED + 1))
     fi
