@@ -186,7 +186,7 @@ clients:
       - "http://localhost:3001/callback"
       - "https://dev.avcd.ai/mcp/oauth/callback"
       - "https://dev.avcd.ai/callback"
-      - "https://dev.avocado.tech/mcp/oauth/callback"
+      - "https://dev.avocado.tech/conta-azul/mcp/oauth/callback"
       - "https://dev.avocado.tech/callback"
       - "https://claude.ai/api/mcp/auth_callback"
       - "https://claude.com/api/mcp/auth_callback"
