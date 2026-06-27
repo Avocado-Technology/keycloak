@@ -11,7 +11,7 @@ export KEYCLOAK_URL="${KEYCLOAK_URL:-https://auth.avcd.ai}"
 export KEYCLOAK_USER="${KEYCLOAK_USER:-${KEYCLOAK_ADMIN_USERNAME:-admin}}"
 export API_AUDIENCE="${API_AUDIENCE:-https://dev.avcd.ai/api}"
 export MCP_AUDIENCE="${MCP_AUDIENCE:-https://dev.avocado.tech/mcp}"
-export CONTA_AZUL_AUDIENCE="${CONTA_AZUL_AUDIENCE:-https://dev.avocado.tech/conta-azul-service}"
+export CONTA_AZUL_AUDIENCE="${CONTA_AZUL_AUDIENCE:-https://dev.avocado.tech/conta-azul-yoga-subgraph}"
 export CONTA_AZUL_YOGA_AUDIENCE="${CONTA_AZUL_YOGA_AUDIENCE:-https://dev.avocado.tech/conta-azul-yoga-subgraph}"
 export API_GATEWAY_AUDIENCE="${API_GATEWAY_AUDIENCE:-https://dev.avocado.tech/api-gateway}"
 
