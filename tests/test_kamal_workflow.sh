@@ -27,37 +27,20 @@ echo "[repo] no second Keycloak deploy workflow"
 check "deploy-keycloak-kamal-dev.yml removed" test ! -f "$REPO_DIR/.github/workflows/deploy-keycloak-kamal-dev.yml"
 
 echo ""
-echo "[prod] deploy-keycloak-kamal-prod.yml (infra — shared IdP)"
+echo "[prod] deploy-keycloak-kamal-prod.yml (retired — manual remove only)"
 check "prod workflow exists" test -f "$PROD_WORKFLOW"
-check "prod documents shared IdP URL" grep -q 'auth.avcd.ai' "$PROD_WORKFLOW" && grep -q 'dev and prod' "$PROD_WORKFLOW"
-check "prod documents Infisical parity" grep -q 'Infisical' "$PROD_WORKFLOW"
-check "prod uses production GitHub env for OIDC claim" grep -qE '^[[:space:]]*environment:[[:space:]]*production' "$PROD_WORKFLOW"
-check "prod OIDC audience is secrets.avcd.ai (pulumi keycloak-ci)" grep -q 'secrets.avcd.ai' "$PROD_WORKFLOW"
-check "prod uses pulumi keycloak-ci identity at repo level" grep -q 'INFISICAL_OIDC_IDENTITY_ID' "$PROD_WORKFLOW"
+check "prod marked retired" grep -q 'RETIRED' "$PROD_WORKFLOW"
+check "prod workflow_dispatch only" grep -q 'workflow_dispatch:' "$PROD_WORKFLOW" && ! grep -qE '^[[:space:]]*push:' "$PROD_WORKFLOW"
+check "prod default kamal_command is remove" grep -q 'default: remove' "$PROD_WORKFLOW"
+check "prod remove job uses SSH docker cleanup" grep -q 'Remove Keycloak containers via SSH' "$PROD_WORKFLOW"
+check "prod remove job targets avcd-keycloak containers" grep -q 'avcd-keycloak' "$PROD_WORKFLOW"
 check "prod id-token write" grep -q 'id-token: write' "$PROD_WORKFLOW"
-check "prod OIDC infisical login" grep -q 'infisical login --method=oidc-auth' "$PROD_WORKFLOW"
-check "prod exports /keycloak" grep -q 'INFISICAL_SECRET_PATH.*/keycloak\|path=.*/keycloak\|/keycloak' "$PROD_WORKFLOW"
-check "prod exports /ci-bootstrap for SSH" grep -q '/ci-bootstrap' "$PROD_WORKFLOW"
-check "prod pins avcd-actions ref" grep -qE 'ref:[[:space:]]*2e0e1b5' "$PROD_WORKFLOW"
-check "prod uses internal avcd-actions checkout" grep -q 'Avocado-Technology/avcd-actions' "$PROD_WORKFLOW" && grep -q 'GH_INFRA_TOKEN' "$PROD_WORKFLOW"
-check "prod uses local kamal-deploy composite" grep -q './avcd-actions/kamal-deploy' "$PROD_WORKFLOW"
+check "prod deploy job gated off remove" grep -q "kamal_command != 'remove'" "$PROD_WORKFLOW"
 if grep -q "$LEGACY_PROJECT_ID" "$PROD_WORKFLOW" 2>/dev/null; then
   echo "  ✗ prod no legacy project id"
   ((errors++)) || true
 else
   echo "  ✓ prod no legacy project id"
-fi
-check "prod localhost registry input" grep -q 'localhost:5555' "$PROD_WORKFLOW"
-check "prod kamal push enabled" grep -q 'skip_registry_login: "false"' "$PROD_WORKFLOW"
-check "prod OIDC discovery verify_url" grep -q 'verify_url:' "$PROD_WORKFLOW" && grep -q 'openid-configuration' "$PROD_WORKFLOW"
-check "prod skip_accessory_boot" grep -q 'skip_accessory_boot' "$PROD_WORKFLOW"
-check "prod renders .kamal/secrets in Infisical step" grep -q 'secrets.ci.template' "$PROD_WORKFLOW"
-check "prod skip_secrets_render for kamal-deploy" grep -q 'skip_secrets_render' "$PROD_WORKFLOW"
-if grep -q 'Preprocess deploy.yml' "$PROD_WORKFLOW" 2>/dev/null; then
-  echo "  ✗ prod should not duplicate preprocess deploy.yml (kamal-deploy renders)"
-  ((errors++)) || true
-else
-  echo "  ✓ prod no duplicate preprocess deploy.yml step"
 fi
 
 echo ""
