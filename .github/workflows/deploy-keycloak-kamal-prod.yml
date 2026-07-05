@@ -45,12 +45,7 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.3"
-          bundler-cache: false
-      - run: gem install kamal -v "${{ vars.KAMAL_VERSION || '2.11.0' }}"
-      - name: Kamal remove (no Infisical)
+      - name: Remove Keycloak containers via SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DO_DEPLOY_SSH_KEY }}
           DEPLOY_HOST: ${{ vars.DO_DEPLOY_HOST }}
@@ -62,10 +57,9 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-          export KAMAL_SSH_KEY_PATH=~/.ssh/deploy_key
-          touch .kamal/secrets && chmod 600 .kamal/secrets
-          kamal remove
-          echo "PASS: avcd-keycloak removed from infra droplet"
+          ssh -o BatchMode=yes -i ~/.ssh/deploy_key "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            'docker ps -a --format "{{.Names}}" | grep -E "avcd-keycloak|keycloak" | xargs -r docker rm -f'
+          echo "PASS: avcd-keycloak containers removed from infra droplet"
 
   sync-infisical:
     if: github.event_name == 'workflow_dispatch' && inputs.sync_infisical_first == true && inputs.kamal_command != 'remove'
