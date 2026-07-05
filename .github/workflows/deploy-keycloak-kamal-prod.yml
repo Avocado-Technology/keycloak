@@ -1,33 +1,21 @@
-# Deploy Keycloak via Kamal — single shared IdP on the infra stack (auth.avcd.ai)
-#
-# Same model as Infisical: one deployment on infra; dev and prod apps consume it by URL
-# (https://auth.avcd.ai/realms/avcd). There is no second Keycloak host for "dev".
-# Local Docker (make up) is for developer machines only.
+# RETIRED: Keycloak decommissioned — manual workflow_dispatch only (remove tears down Kamal service).
 #
 # Secrets: single Infisical (https://secrets.avcd.ai), avcd-infra project (/keycloak,
 # /ci-bootstrap). INFISICAL_ENV=prod is the Infisical slug for infra-host secrets, not
 # a separate Keycloak instance.
-#
-# OIDC: Pulumi keycloak-ci (repo:Avocado-Technology/keycloak:*). GitHub environment
-# "production" is for OIDC claim binding only — not an app deploy environment.
 
-name: Deploy Keycloak to DigitalOcean (infra) — Kamal
+name: Deploy Keycloak to DigitalOcean (infra) — Kamal [retired]
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "config/**"
-      - ".kamal/**"
-      - ".github/workflows/deploy-keycloak-kamal-prod.yml"
   workflow_dispatch:
     inputs:
       kamal_command:
-        description: Kamal command (deploy or setup for first run)
+        description: Kamal command (remove to decommission)
         required: false
-        default: deploy
+        default: remove
         type: choice
         options:
+          - remove
           - deploy
           - setup
           - redeploy
