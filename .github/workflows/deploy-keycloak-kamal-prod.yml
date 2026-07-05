@@ -39,8 +39,36 @@ permissions:
   id-token: write
 
 jobs:
+  remove:
+    if: github.event.inputs.kamal_command == 'remove'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: false
+      - run: gem install kamal -v "${{ vars.KAMAL_VERSION || '2.11.0' }}"
+      - name: Kamal remove (no Infisical)
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DO_DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ vars.DO_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DO_DEPLOY_USER || 'deploy' }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          umask 077
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          export KAMAL_SSH_KEY_PATH=~/.ssh/deploy_key
+          touch .kamal/secrets && chmod 600 .kamal/secrets
+          kamal remove
+          echo "PASS: avcd-keycloak removed from infra droplet"
+
   sync-infisical:
-    if: github.event_name == 'workflow_dispatch' && inputs.sync_infisical_first == true
+    if: github.event_name == 'workflow_dispatch' && inputs.sync_infisical_first == true && inputs.kamal_command != 'remove'
     uses: ./.github/workflows/sync-infisical-secrets.yml
     with:
       pulumi_command: up
@@ -48,7 +76,9 @@ jobs:
 
   deploy:
     needs: [sync-infisical]
-    if: always() && (needs.sync-infisical.result == 'success' || needs.sync-infisical.result == 'skipped')
+    if: >-
+      github.event.inputs.kamal_command != 'remove' &&
+      always() && (needs.sync-infisical.result == 'success' || needs.sync-infisical.result == 'skipped')
     runs-on: ubuntu-latest
     # GitHub environment "production" = OIDC claim binding for keycloak-ci only (not a second IdP).
     # Ensure wait_timer is 0: Settings → Environments → production.
