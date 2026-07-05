@@ -60,10 +60,10 @@ pull_infisical_keycloak() {
     fi
   fi
 
-  local tmp mcp_tmp
+  local tmp="" mcp_tmp=""
   tmp="$(mktemp)"
   mcp_tmp="$(mktemp)"
-  trap 'rm -f "${tmp}" "${mcp_tmp}"' RETURN
+  trap '[[ -n "${tmp:-}" ]] && rm -f "${tmp}"; [[ -n "${mcp_tmp:-}" ]] && rm -f "${mcp_tmp}"' RETURN
 
   if infisical export --env="${INFISICAL_ENV}" --path="${INFISICAL_SECRET_PATH}" \
     --projectId="${INFISICAL_INFRA_PROJECT_ID}" --token="${INFISICAL_TOKEN}" \
@@ -92,7 +92,7 @@ pull_app_secret() {
   local project_id="$1" env_slug="$2" path="$3" key="$4" target_var="$5"
   [[ -n "${!target_var:-}" ]] && return 0
   [[ -z "${INFISICAL_TOKEN:-}" ]] && return 0
-  local tmp val
+  local tmp="" val=""
   tmp="$(mktemp)"
   if infisical export --env="${env_slug}" --path="${path}" \
     --projectId="${project_id}" --token="${INFISICAL_TOKEN}" \
@@ -103,7 +103,7 @@ pull_app_secret() {
       export "$target_var"
     fi
   fi
-  rm -f "${tmp}"
+  [[ -n "${tmp:-}" ]] && rm -f "${tmp}"
 }
 
 WEB_PROJECT_ID="${INFISICAL_WEB_PROJECT_ID:-4c32b3c4-fb30-44a2-81bb-2ae4211404a3}"
