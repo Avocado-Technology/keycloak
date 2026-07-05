@@ -96,22 +96,6 @@ clientScopes:
           id.token.claim: "false"
           access.token.claim: "true"
 
-  - name: avcd-api-gateway-audience
-    description: Adds AVCD API Gateway (Cosmo Router) audience claim to access tokens
-    protocol: openid-connect
-    attributes:
-      include.in.token.scope: "true"
-      display.on.consent.screen: "false"
-    protocolMappers:
-      - name: avcd-api-gateway-audience-mapper
-        protocol: openid-connect
-        protocolMapper: oidc-audience-mapper
-        consentRequired: false
-        config:
-          included.custom.audience: "${env:API_GATEWAY_AUDIENCE}"
-          id.token.claim: "false"
-          access.token.claim: "true"
-
   - name: avcd-subject
     description: Subject (sub) claim for AVCD tokens
     protocol: openid-connect
@@ -165,7 +149,6 @@ clients:
       - profile
       - email
     optionalClientScopes:
-      - avcd-api-gateway-audience
       - avcd-conta-azul-yoga-audience
 
   - clientId: avcd-mcp
@@ -307,7 +290,6 @@ clients:
     defaultClientScopes:
       - avcd-conta-azul-audience
       - avcd-conta-azul-yoga-audience
-      - avcd-api-gateway-audience
 
 scopeMappings:
   - client: avcd-ai
